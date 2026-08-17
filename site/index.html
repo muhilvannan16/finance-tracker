@@ -2,11 +2,61 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>finance-tracker</title>
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <h1>finance-tracker</h1>
-  <p>Coming soon.</p>
-  <script type="module" src="js/storage.js"></script>
+
+  <form id="transaction-form">
+    <div class="form-field">
+      <label for="label">Label</label>
+      <input type="text" id="label" name="label" required>
+    </div>
+
+    <div class="form-field">
+      <label for="category">Category</label>
+      <input type="text" id="category" name="category" required>
+    </div>
+
+    <div class="form-field">
+      <label for="amount">Amount</label>
+      <input type="number" id="amount" name="amount" min="0" step="0.01" required>
+    </div>
+
+    <div class="form-field">
+      <label for="direction">Direction</label>
+      <select id="direction" name="direction">
+        <option value="expense">Expense</option>
+        <option value="income">Income</option>
+      </select>
+    </div>
+
+    <div class="form-field">
+      <label for="date">Date</label>
+      <input type="date" id="date" name="date" required>
+    </div>
+
+    <div class="form-field">
+      <label for="frequency">Frequency</label>
+      <select id="frequency" name="frequency">
+        <option value="none">None</option>
+        <option value="monthly">Monthly</option>
+      </select>
+    </div>
+
+    <div class="form-field">
+      <label for="dayOfMonth">Day of Month</label>
+      <input type="number" id="dayOfMonth" name="dayOfMonth" min="1" max="31">
+    </div>
+
+    <button type="submit">Add Transaction</button>
+    <button type="button" id="cancel-edit-btn" style="display: none;">Cancel</button>
+  </form>
+
+  <div id="transaction-list"></div>
+
+  <script type="module" src="js/app.js"></script>
 </body>
 </html>

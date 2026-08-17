@@ -1,0 +1,167 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.5;
+  max-width: 640px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  color: #1a1a1a;
+  background: #fafafa;
+}
+
+h1 {
+  margin-bottom: 1.5rem;
+}
+
+/* ---- Form ---- */
+
+form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+form .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+form .form-field.full-width {
+  grid-column: 1 / -1;
+}
+
+label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+input,
+select {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+input:focus,
+select:focus {
+  outline: 2px solid #4a90d9;
+  outline-offset: 1px;
+}
+
+button[type="submit"] {
+  grid-column: 1 / -1;
+  padding: 0.5rem 1rem;
+  background: #4a90d9;
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button[type="submit"]:hover {
+  background: #357abd;
+}
+
+#cancel-edit-btn {
+  grid-column: 1 / -1;
+  padding: 0.5rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+}
+
+#cancel-edit-btn:hover {
+  background: #f0f0f0;
+  border-color: #999;
+}
+
+/* ---- Transaction list ---- */
+
+#transaction-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.transaction-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.transaction-row:last-child {
+  border-bottom: none;
+}
+
+.transaction-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.tx-label {
+  font-weight: 600;
+}
+
+.tx-category,
+.tx-date {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.tx-amount {
+  font-weight: 600;
+  white-space: nowrap;
+  min-width: 5rem;
+  text-align: right;
+}
+
+.tx-amount.income {
+  color: #1a7f37;
+}
+
+.tx-amount.expense {
+  color: #cf222e;
+}
+
+.transaction-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.btn-edit,
+.btn-delete {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.btn-edit:hover {
+  background: #eef3fa;
+  border-color: #4a90d9;
+}
+
+.btn-delete:hover {
+  background: #fde8e8;
+  border-color: #cf222e;
+}
