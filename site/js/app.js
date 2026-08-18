@@ -4,6 +4,7 @@ import {
   getAccounts,
   saveAccounts,
 } from "./storage.js";
+import { initPyodide } from "./pyBridge.js";
 
 /**
  * The id of the transaction currently being edited, or null if the form
@@ -213,6 +214,16 @@ function handleFormSubmit(e) {
 /* ------------------------------------------------------------------ */
 
 document.addEventListener("DOMContentLoaded", () => {
+  initPyodide()
+    .then(() => {
+      document.getElementById("engine-status").style.display = "none";
+    })
+    .catch((err) => {
+      document.getElementById("engine-status").textContent =
+        "Calculation engine failed to load. Try refreshing the page.";
+      console.error("Pyodide failed to load:", err);
+    });
+
   seedDefaultAccount();
 
   const form = document.getElementById("transaction-form");
