@@ -8,7 +8,6 @@
  * @property {string} date
  * @property {string} accountId
  * @property {"none" | "monthly" | string} frequency
- * @property {number} [dayOfMonth]
  */
 
 /**

@@ -109,9 +109,6 @@ function handleEdit(id) {
   document.getElementById("direction").value = tx.direction;
   document.getElementById("date").value = tx.date;
   document.getElementById("frequency").value = tx.frequency;
-  document.getElementById("dayOfMonth").value =
-    tx.dayOfMonth != null ? tx.dayOfMonth : "";
-
   editingId = id;
 
   document.getElementById("cancel-edit-btn").style.display = "inline-block";
@@ -165,17 +162,6 @@ function handleFormSubmit(e) {
   const direction = document.getElementById("direction").value;
   const date = document.getElementById("date").value;
   const frequency = document.getElementById("frequency").value;
-  const dayOfMonthRaw = document.getElementById("dayOfMonth").value.trim();
-
-  let dayOfMonth = null;
-  if (frequency === "monthly") {
-    const parsed = parseInt(dayOfMonthRaw, 10);
-    if (isNaN(parsed) || parsed < 1 || parsed > 31) {
-      alert("Please enter a valid day of month (1–31) for a monthly transaction.");
-      return;
-    }
-    dayOfMonth = parsed;
-  }
 
   const transaction = {
     id: editingId ?? crypto.randomUUID(),
@@ -186,7 +172,6 @@ function handleFormSubmit(e) {
     date,
     accountId: "main",
     frequency,
-    dayOfMonth,
   };
 
   const transactions = getTransactions();
