@@ -129,3 +129,16 @@ Then open `http://localhost:8000` in your browser.
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
+
+---
+
+## ⭐ Support
+
+If you find this project useful or interesting, consider giving it a star — it helps others discover it too.
+
+---
+
+## 👤 Author
+
+**Muhilvannan Elavazhagan** ([@muhilvannan16](https://github.com/muhilvannan16))
+
