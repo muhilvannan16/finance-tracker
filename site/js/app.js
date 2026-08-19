@@ -4,7 +4,7 @@ import {
   getAccounts,
   saveAccounts,
 } from "./storage.js";
-import { initPyodide } from "./pyBridge.js";
+import { loadProjectionEngine, getProjectedBalance, getBalanceSeries } from "./pyBridge.js";
 
 /**
  * The id of the transaction currently being edited, or null if the form
@@ -12,6 +12,20 @@ import { initPyodide } from "./pyBridge.js";
  * @type {string | null}
  */
 let editingId = null;
+
+/**
+ * Promise that resolves once the projection engine (Pyodide + Python
+ * source) has finished loading. Set in the DOMContentLoaded listener.
+ * @type {Promise<void> | null}
+ */
+let engineReadyPromise = null;
+
+/**
+ * The active Chart.js instance for the balance chart, or null if no
+ * chart is currently rendered.
+ * @type {object | null}
+ */
+let balanceChart = null;
 
 /**
  * Ensures a default "Main" account exists in storage.
@@ -140,6 +154,12 @@ function handleDelete(id) {
   const transactions = getTransactions().filter((t) => t.id !== id);
   saveTransactions(transactions);
   renderTransactions();
+  renderCurrentBalance();
+  document.getElementById("projected-balance-display").textContent = "";
+  if (balanceChart) {
+    balanceChart.destroy();
+    balanceChart = null;
+  }
 }
 
 /**
@@ -187,6 +207,12 @@ function handleFormSubmit(e) {
 
   saveTransactions(transactions);
   renderTransactions();
+  renderCurrentBalance();
+  document.getElementById("projected-balance-display").textContent = "";
+  if (balanceChart) {
+    balanceChart.destroy();
+    balanceChart = null;
+  }
   e.target.reset();
   editingId = null;
   document.getElementById("cancel-edit-btn").style.display = "none";
@@ -194,14 +220,157 @@ function handleFormSubmit(e) {
     "Add Transaction";
 }
 
+/**
+ * Computes the projected balance as of today and displays it in the
+ * #current-balance element. Waits for the projection engine to be ready
+ * before running.
+ *
+ * @returns {Promise<void>}
+ */
+async function renderCurrentBalance() {
+  try {
+    await engineReadyPromise;
+
+    const now = new Date();
+    const todayStr =
+      now.getFullYear() +
+      "-" +
+      String(now.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(now.getDate()).padStart(2, "0");
+
+    const account = getAccounts().find((a) => a.id === "main");
+    const startingBalance = account ? account.startingBalance : 0;
+    const transactions = getTransactions();
+
+    const balance = await getProjectedBalance(
+      transactions,
+      startingBalance,
+      todayStr
+    );
+
+    const el = document.getElementById("current-balance");
+    const sign = balance < 0 ? "-" : "";
+    el.textContent = `Current balance: ${sign}$${Math.abs(balance).toFixed(2)}`;
+  } catch (err) {
+    document.getElementById("current-balance").textContent =
+      "Unable to calculate balance.";
+    console.error("Balance calculation failed:", err);
+  }
+}
+
+/**
+ * Reads the date from #projection-date, computes the projected balance
+ * as of that date, and displays the result in #projected-balance-display.
+ * If no date is selected, prompts the user to pick one.
+ *
+ * @returns {Promise<void>}
+ */
+async function renderProjectedBalance() {
+  const display = document.getElementById("projected-balance-display");
+  const dateValue = document.getElementById("projection-date").value;
+
+  if (!dateValue) {
+    display.textContent = "Please select a date.";
+    return;
+  }
+
+  try {
+    await engineReadyPromise;
+
+    const account = getAccounts().find((a) => a.id === "main");
+    const startingBalance = account ? account.startingBalance : 0;
+    const transactions = getTransactions();
+
+    const balance = await getProjectedBalance(
+      transactions,
+      startingBalance,
+      dateValue
+    );
+
+    const sign = balance < 0 ? "-" : "";
+    display.textContent = `Projected balance as of ${dateValue}: ${sign}$${Math.abs(balance).toFixed(2)}`;
+  } catch (err) {
+    display.textContent = "Unable to calculate projected balance.";
+    console.error("Projection calculation failed:", err);
+  }
+}
+
+/**
+ * Fetches a daily balance series from today to the date selected in
+ * #projection-date and renders it as a Chart.js line chart on the
+ * #balance-chart canvas. Destroys any previously rendered chart first.
+ *
+ * @returns {Promise<void>}
+ */
+async function renderBalanceChart() {
+  const dateValue = document.getElementById("projection-date").value;
+
+  if (!dateValue) {
+    alert("Please select a date.");
+    return;
+  }
+
+  try {
+    await engineReadyPromise;
+
+    const now = new Date();
+    const todayStr =
+      now.getFullYear() +
+      "-" +
+      String(now.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(now.getDate()).padStart(2, "0");
+    
+    if (dateValue < todayStr) {
+      alert("Please select a date today or in the future to see a projection chart.");
+      return;
+    }  
+
+    const account = getAccounts().find((a) => a.id === "main");
+    const startingBalance = account ? account.startingBalance : 0;
+    const transactions = getTransactions();
+
+    const series = await getBalanceSeries(
+      transactions,
+      startingBalance,
+      todayStr,
+      dateValue
+    );
+
+    if (balanceChart) {
+      balanceChart.destroy();
+    }
+
+    const ctx = document.getElementById("balance-chart").getContext("2d");
+    balanceChart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: series.map((point) => point.date),
+        datasets: [
+          {
+            label: "Projected Balance",
+            data: series.map((point) => point.balance),
+          },
+        ],
+      },
+    });
+  } catch (err) {
+    console.error("Chart rendering failed:", err);
+    alert("Unable to render balance chart.");
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /*  Bootstrap                                                         */
 /* ------------------------------------------------------------------ */
 
 document.addEventListener("DOMContentLoaded", () => {
-  initPyodide()
+  engineReadyPromise = loadProjectionEngine();
+  engineReadyPromise
     .then(() => {
       document.getElementById("engine-status").style.display = "none";
+      renderCurrentBalance();
     })
     .catch((err) => {
       document.getElementById("engine-status").textContent =
@@ -216,6 +385,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("cancel-edit-btn")
     .addEventListener("click", handleCancelEdit);
+
+  document.getElementById("calculate-projection-btn")
+    .addEventListener("click", renderProjectedBalance);
+
+  document.getElementById("show-chart-btn")
+    .addEventListener("click", renderBalanceChart);
 
   renderTransactions();
 });

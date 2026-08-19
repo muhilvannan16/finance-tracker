@@ -6,10 +6,22 @@
   <title>finance-tracker</title>
   <link rel="stylesheet" href="css/style.css">
   <script src="https://cdn.jsdelivr.net/pyodide/v314.0.4/full/pyodide.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <h1>finance-tracker</h1>
   <p id="engine-status">Loading calculation engine…</p>
+  <p id="current-balance"></p>
+
+  <div id="projection-tool">
+    <h2>Project Future Balance</h2>
+    <label for="projection-date">As of date</label>
+    <input type="date" id="projection-date">
+    <button type="button" id="calculate-projection-btn">Calculate</button>
+    <button type="button" id="show-chart-btn">Show Chart</button>
+    <p id="projected-balance-display"></p>
+    <canvas id="balance-chart"></canvas>
+  </div>
 
   <form id="transaction-form">
     <div class="form-field">

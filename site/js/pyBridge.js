@@ -37,3 +37,63 @@ export function getPyodide() {
   }
   return pyodideReadyPromise;
 }
+
+/**
+ * Loads the projection engine Python source into the Pyodide runtime.
+ *
+ * Fetches "py/projection.py" (served alongside index.html), then executes
+ * its source inside Pyodide so that all Python functions it defines —
+ * including `project_from_json` — become available in the global namespace.
+ *
+ * @returns {Promise<void>}
+ */
+export async function loadProjectionEngine() {
+  const pyodide = await initPyodide();
+  const response = await fetch("py/projection.py");
+  const source = await response.text();
+  pyodide.runPython(source);
+}
+
+/**
+ * Computes the projected account balance as of a given date by calling
+ * the Python `project_from_json` function loaded by
+ * {@link loadProjectionEngine}.
+ *
+ * @param {Array<object>} transactions - Transaction objects (same shape
+ *   that storage.js produces).
+ * @param {number} startingBalance - The account's starting balance.
+ * @param {string} asOfDateStr - ISO date string (e.g. "2026-06-01") to
+ *   project up to.
+ * @returns {Promise<number>} The projected balance as a plain JS number.
+ */
+export async function getProjectedBalance(transactions, startingBalance, asOfDateStr) {
+  const pyodide = await getPyodide();
+  const json = JSON.stringify(transactions);
+  const projectFromJson = pyodide.globals.get("project_from_json");
+  return projectFromJson(json, startingBalance, asOfDateStr);
+}
+
+/**
+ * Returns a daily balance series between two dates by calling the Python
+ * `balance_series_json` function loaded by {@link loadProjectionEngine}.
+ *
+ * The Python function returns a JSON string, so this wrapper parses it
+ * before returning.
+ *
+ * @param {Array<object>} transactions - Transaction objects (same shape
+ *   that storage.js produces).
+ * @param {number} startingBalance - The account's starting balance.
+ * @param {string} startDateStr - ISO date string for the series start
+ *   (e.g. "2026-06-01").
+ * @param {string} endDateStr - ISO date string for the series end
+ *   (e.g. "2026-12-31").
+ * @returns {Promise<Array<{date: string, balance: number}>>} Daily
+ *   balance points.
+ */
+export async function getBalanceSeries(transactions, startingBalance, startDateStr, endDateStr) {
+  const pyodide = await getPyodide();
+  const json = JSON.stringify(transactions);
+  const balanceSeriesJson = pyodide.globals.get("balance_series_json");
+  const resultJson = balanceSeriesJson(json, startingBalance, startDateStr, endDateStr);
+  return JSON.parse(resultJson);
+}
