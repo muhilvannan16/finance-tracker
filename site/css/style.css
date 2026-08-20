@@ -380,6 +380,42 @@ input:-webkit-autofill:focus {
   transition: background-color 5000s ease-in-out 0s;
 }
 
+/* ---- Account List ---- */
+
+.account-row {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(244, 241, 234, 0.06);
+}
+
+.account-row:last-child {
+  border-bottom: none;
+}
+
+.account-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.acct-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.acct-balance {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* ---- Transaction account label ---- */
+
+.tx-account {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
 /* ---- Focus visible (keyboard) ---- */
 
 :focus-visible {
