@@ -4,67 +4,90 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>finance-tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;600&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <script src="https://cdn.jsdelivr.net/pyodide/v314.0.4/full/pyodide.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
-  <h1>finance-tracker</h1>
-  <p id="engine-status">Loading calculation engine…</p>
-  <p id="current-balance"></p>
+  <div class="app-shell">
 
-  <div id="projection-tool">
-    <h2>Project Future Balance</h2>
-    <label for="projection-date">As of date</label>
-    <input type="date" id="projection-date">
-    <button type="button" id="calculate-projection-btn">Calculate</button>
-    <button type="button" id="show-chart-btn">Show Chart</button>
-    <p id="projected-balance-display"></p>
-    <canvas id="balance-chart"></canvas>
+    <header class="hero">
+      <h1>finance-tracker</h1>
+      <p id="engine-status">Loading calculation engine…</p>
+      <p id="current-balance"></p>
+    </header>
+
+    <hr class="horizon-line">
+
+    <div id="projection-tool" class="card">
+      <h2>Project Future Balance</h2>
+      <div class="projection-controls">
+        <div class="form-field">
+          <label for="projection-date">As of date</label>
+          <input type="date" id="projection-date">
+        </div>
+        <div class="btn-group">
+          <button type="button" id="calculate-projection-btn" class="btn-secondary">Calculate</button>
+          <button type="button" id="show-chart-btn" class="btn-secondary">Show Chart</button>
+        </div>
+      </div>
+      <p id="projected-balance-display"></p>
+      <canvas id="balance-chart"></canvas>
+    </div>
+
+    <div class="card">
+      <h2>Add Transaction</h2>
+      <form id="transaction-form">
+        <div class="form-field">
+          <label for="label">Label</label>
+          <input type="text" id="label" name="label" required>
+        </div>
+
+        <div class="form-field">
+          <label for="category">Category</label>
+          <input type="text" id="category" name="category" required>
+        </div>
+
+        <div class="form-field">
+          <label for="amount">Amount</label>
+          <input type="number" id="amount" name="amount" min="0" step="0.01" required>
+        </div>
+
+        <div class="form-field">
+          <label for="direction">Direction</label>
+          <select id="direction" name="direction">
+            <option value="expense">Expense</option>
+            <option value="income">Income</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="date">Date</label>
+          <input type="date" id="date" name="date" required>
+        </div>
+
+        <div class="form-field">
+          <label for="frequency">Frequency</label>
+          <select id="frequency" name="frequency">
+            <option value="none">None</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn-primary">Add Transaction</button>
+        <button type="button" id="cancel-edit-btn" style="display: none;">Cancel</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Transactions</h2>
+      <div id="transaction-list"></div>
+    </div>
+
   </div>
-
-  <form id="transaction-form">
-    <div class="form-field">
-      <label for="label">Label</label>
-      <input type="text" id="label" name="label" required>
-    </div>
-
-    <div class="form-field">
-      <label for="category">Category</label>
-      <input type="text" id="category" name="category" required>
-    </div>
-
-    <div class="form-field">
-      <label for="amount">Amount</label>
-      <input type="number" id="amount" name="amount" min="0" step="0.01" required>
-    </div>
-
-    <div class="form-field">
-      <label for="direction">Direction</label>
-      <select id="direction" name="direction">
-        <option value="expense">Expense</option>
-        <option value="income">Income</option>
-      </select>
-    </div>
-
-    <div class="form-field">
-      <label for="date">Date</label>
-      <input type="date" id="date" name="date" required>
-    </div>
-
-    <div class="form-field">
-      <label for="frequency">Frequency</label>
-      <select id="frequency" name="frequency">
-        <option value="none">None</option>
-        <option value="monthly">Monthly</option>
-      </select>
-    </div>
-
-    <button type="submit">Add Transaction</button>
-    <button type="button" id="cancel-edit-btn" style="display: none;">Cancel</button>
-  </form>
-
-  <div id="transaction-list"></div>
 
   <script type="module" src="js/app.js"></script>
 </body>

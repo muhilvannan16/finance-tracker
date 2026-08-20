@@ -1,3 +1,28 @@
+/* ============================================================
+   The Horizon — Finance Tracker Theme
+   ============================================================ */
+
+/* ---- Custom Properties ---- */
+
+:root {
+  --bg:         #12172B;
+  --card:       #1B2242;
+  --accent:     #F0A868;
+  --expense:    #E8604C;
+  --income:     #7FCBA4;
+  --text:       #F4F1EA;
+  --muted:      #9AA0B4;
+
+  --font-display: "Fraunces", Georgia, serif;
+  --font-body:    "Manrope", system-ui, sans-serif;
+  --font-mono:    "IBM Plex Mono", ui-monospace, monospace;
+
+  --radius:     10px;
+  --transition: 0.2s ease;
+}
+
+/* ---- Reset ---- */
+
 *,
 *::before,
 *::after {
@@ -6,91 +31,243 @@
   padding: 0;
 }
 
+/* ---- Base ---- */
+
 body {
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  line-height: 1.5;
-  max-width: 640px;
-  margin: 2rem auto;
-  padding: 0 1rem;
-  color: #1a1a1a;
-  background: #fafafa;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--bg);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
-h1 {
+.app-shell {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 4rem;
+}
+
+/* ---- Hero / Header ---- */
+
+.hero {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.hero h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 2rem;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin-bottom: 0.25rem;
+}
+
+#engine-status {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+
+#current-balance {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.6rem;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+}
+
+/* ---- Horizon Line ---- */
+
+.horizon-line {
+  height: 3px;
+  border: none;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--bg) 0%, var(--accent) 100%);
+  margin: 0 auto 2rem;
+  width: 100%;
+  opacity: 0.85;
+}
+
+/* ---- Cards ---- */
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 1.5rem;
   margin-bottom: 1.5rem;
+}
+
+.card h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.15rem;
+  color: var(--text);
+  margin-bottom: 1rem;
+}
+
+/* ---- Projection Tool ---- */
+
+.projection-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.projection-controls .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+  min-width: 140px;
+}
+
+.projection-controls .btn-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+#projected-balance-display {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--muted);
+  min-height: 1.4em;
+  margin-bottom: 0.75rem;
+}
+
+#balance-chart {
+  max-height: 260px;
+  margin-top: 0.5rem;
 }
 
 /* ---- Form ---- */
 
-form {
+form#transaction-form {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
-  margin-bottom: 2rem;
 }
 
-form .form-field {
+form#transaction-form .form-field {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
 }
 
-form .form-field.full-width {
+form#transaction-form .form-field.full-width {
   grid-column: 1 / -1;
 }
 
 label {
-  font-size: 0.85rem;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
   font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 input,
 select {
-  padding: 0.4rem 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  font-family: var(--font-body);
   font-size: 0.95rem;
+  padding: 0.5rem 0.65rem;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid rgba(244, 241, 234, 0.12);
+  border-radius: 6px;
+  transition: border-color var(--transition), box-shadow var(--transition);
 }
 
 input:focus,
 select:focus {
-  outline: 2px solid #4a90d9;
-  outline-offset: 1px;
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(240, 168, 104, 0.25);
 }
 
-button[type="submit"] {
+/* select arrow colour fix for dark bg */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%239AA0B4' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  padding-right: 2rem;
+}
+
+/* date input icon colour fix */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.7);
+}
+
+/* ---- Buttons ---- */
+
+.btn-primary {
   grid-column: 1 / -1;
-  padding: 0.5rem 1rem;
-  background: #4a90d9;
-  color: #fff;
+  padding: 0.6rem 1.25rem;
+  font-family: var(--font-body);
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 700;
+  color: var(--bg);
+  background: var(--accent);
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
+  transition: background var(--transition), transform var(--transition);
 }
 
-button[type="submit"]:hover {
-  background: #357abd;
+.btn-primary:hover {
+  background: #e59b55;
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+.btn-secondary {
+  padding: 0.5rem 1rem;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid rgba(244, 241, 234, 0.15);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition);
+}
+
+.btn-secondary:hover {
+  border-color: var(--accent);
+  background: rgba(240, 168, 104, 0.08);
 }
 
 #cancel-edit-btn {
   grid-column: 1 / -1;
   padding: 0.5rem 1rem;
-  font-size: 0.95rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
   font-weight: 600;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background: #fff;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid rgba(244, 241, 234, 0.12);
+  border-radius: 6px;
   cursor: pointer;
+  transition: border-color var(--transition), color var(--transition);
 }
 
 #cancel-edit-btn:hover {
-  background: #f0f0f0;
-  border-color: #999;
+  border-color: var(--muted);
+  color: var(--text);
 }
 
-/* ---- Transaction list ---- */
+/* ---- Transaction List ---- */
 
 #transaction-list {
   display: flex;
@@ -101,12 +278,21 @@ button[type="submit"]:hover {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid #e0e0e0;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid rgba(244, 241, 234, 0.06);
+  transition: background var(--transition);
 }
 
 .transaction-row:last-child {
   border-bottom: none;
+}
+
+.transaction-row:hover {
+  background: rgba(244, 241, 234, 0.03);
+  margin: 0 -0.75rem;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  border-radius: 6px;
 }
 
 .transaction-info {
@@ -118,50 +304,152 @@ button[type="submit"]:hover {
 
 .tx-label {
   font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
 }
 
-.tx-category,
+.tx-category {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
 .tx-date {
-  font-size: 0.8rem;
-  color: #666;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
 }
 
 .tx-amount {
+  font-family: var(--font-mono);
   font-weight: 600;
+  font-size: 0.95rem;
   white-space: nowrap;
-  min-width: 5rem;
+  min-width: 5.5rem;
   text-align: right;
 }
 
 .tx-amount.income {
-  color: #1a7f37;
+  color: var(--income);
 }
 
 .tx-amount.expense {
-  color: #cf222e;
+  color: var(--expense);
 }
 
 .transaction-actions {
   display: flex;
-  gap: 0.4rem;
+  gap: 0.35rem;
 }
 
 .btn-edit,
 .btn-delete {
-  padding: 0.25rem 0.6rem;
-  font-size: 0.8rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background: #fff;
+  padding: 0.2rem 0.55rem;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  border: 1px solid rgba(244, 241, 234, 0.1);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
   cursor: pointer;
+  transition: border-color var(--transition), color var(--transition),
+    background var(--transition);
 }
 
 .btn-edit:hover {
-  background: #eef3fa;
-  border-color: #4a90d9;
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(240, 168, 104, 0.08);
 }
 
 .btn-delete:hover {
-  background: #fde8e8;
-  border-color: #cf222e;
+  color: var(--expense);
+  border-color: var(--expense);
+  background: rgba(232, 96, 76, 0.08);
+}
+
+/* ---- Autofill ---- */
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text);
+  -webkit-box-shadow: 0 0 1000px 1000px var(--bg) inset;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* ---- Focus visible (keyboard) ---- */
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+input:focus-visible,
+select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(240, 168, 104, 0.25);
+}
+
+/* ---- Balance Animation ---- */
+
+@keyframes balance-update {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#current-balance.balance-updated {
+  animation: balance-update 0.4s ease;
+}
+
+/* ---- Reduced Motion ---- */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0s !important;
+    animation-duration: 0s !important;
+  }
+}
+
+/* ---- Responsive ---- */
+
+@media (max-width: 480px) {
+  .app-shell {
+    padding: 1.5rem 1rem 3rem;
+  }
+
+  .hero h1 {
+    font-size: 1.6rem;
+  }
+
+  #current-balance {
+    font-size: 1.3rem;
+  }
+
+  form#transaction-form {
+    grid-template-columns: 1fr;
+  }
+
+  .projection-controls {
+    flex-direction: column;
+  }
+
+  .transaction-row {
+    flex-wrap: wrap;
+  }
+
+  .tx-amount {
+    min-width: auto;
+  }
 }
