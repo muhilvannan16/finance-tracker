@@ -4,6 +4,7 @@ import {
   getAccounts,
   saveAccounts,
   getTransfers,
+  saveTransfers,
 } from "./storage.js";
 import { loadProjectionEngine, getProjectedBalance, getBalanceSeries } from "./pyBridge.js";
 
@@ -27,6 +28,13 @@ let engineReadyPromise = null;
  * @type {object | null}
  */
 let balanceChart = null;
+
+/**
+ * The id of the transfer currently being edited, or null if the form
+ * is in "add new" mode.
+ * @type {string | null}
+ */
+let editingTransferId = null;
 
 /**
  * Ensures a default "Main" account exists in storage.
@@ -157,6 +165,7 @@ function handleAccountFormSubmit(e) {
   renderAccountList();
   renderAccountSelector();
   renderTxAccountOptions();
+  renderTransferAccountOptions();
   e.target.reset();
 }
 
@@ -552,6 +561,250 @@ async function renderBalanceChart() {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Transfer helpers                                                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Populates a single <select> element with one <option> per account.
+ *
+ * @param {HTMLSelectElement} selector - The <select> to populate.
+ * @param {Account[]} accounts - The accounts to list.
+ * @returns {void}
+ */
+function populateAccountSelect(selector, accounts) {
+  const previousValue = selector.value;
+  selector.innerHTML = "";
+
+  accounts.forEach((acct) => {
+    const opt = document.createElement("option");
+    opt.value = acct.id;
+    opt.textContent = acct.name;
+    selector.appendChild(opt);
+  });
+
+  if (accounts.some((a) => a.id === previousValue)) {
+    selector.value = previousValue;
+  }
+}
+
+/**
+ * Populates both #from-account and #to-account dropdowns,
+ * then applies the cross-disable constraint.
+ *
+ * @returns {void}
+ */
+function renderTransferAccountOptions() {
+  const accounts = getAccounts();
+  const fromSelect = document.getElementById("from-account");
+  const toSelect = document.getElementById("to-account");
+  populateAccountSelect(fromSelect, accounts);
+  populateAccountSelect(toSelect, accounts);
+  if (toSelect.value === fromSelect.value) {
+    const alternative = accounts.find((a) => a.id !== fromSelect.value);
+    if (alternative) {
+      toSelect.value = alternative.id;
+    }
+  }
+  updateTransferAccountConstraints();
+}
+
+/**
+ * Disables the currently selected "from" account in the "to" dropdown
+ * and vice-versa, so the user cannot pick the same account for both.
+ *
+ * @returns {void}
+ */
+function updateTransferAccountConstraints() {
+  const fromSelect = document.getElementById("from-account");
+  const toSelect = document.getElementById("to-account");
+  const fromVal = fromSelect.value;
+  const toVal = toSelect.value;
+
+  Array.from(fromSelect.options).forEach((opt) => {
+    opt.disabled = opt.value === toVal;
+  });
+  Array.from(toSelect.options).forEach((opt) => {
+    opt.disabled = opt.value === fromVal;
+  });
+}
+
+/**
+ * Renders every stored transfer into the #transfer-list container.
+ *
+ * @returns {void}
+ */
+function renderTransfers() {
+  const list = document.getElementById("transfer-list");
+  list.innerHTML = "";
+
+  const transfers = getTransfers();
+  const accounts = getAccounts();
+
+  transfers.forEach((tr) => {
+    const row = document.createElement("div");
+    row.className = "transfer-row";
+
+    const info = document.createElement("div");
+    info.className = "transfer-info";
+
+    const fromAcct = accounts.find((a) => a.id === tr.fromAccountId);
+    const toAcct = accounts.find((a) => a.id === tr.toAccountId);
+    const accountsSpan = document.createElement("span");
+    accountsSpan.className = "transfer-accounts";
+    accountsSpan.textContent =
+      `${fromAcct ? fromAcct.name : tr.fromAccountId} → ${toAcct ? toAcct.name : tr.toAccountId}`;
+
+    const dateSpan = document.createElement("span");
+    dateSpan.className = "transfer-date";
+    dateSpan.textContent = tr.date;
+
+    info.append(accountsSpan, dateSpan);
+
+    const amountSpan = document.createElement("span");
+    amountSpan.className = "transfer-amount";
+    amountSpan.textContent = `$${Number(tr.amount).toFixed(2)}`;
+
+    const actions = document.createElement("div");
+    actions.className = "transfer-actions";
+
+    const editBtn = document.createElement("button");
+    editBtn.className = "btn-edit";
+    editBtn.textContent = "Edit";
+    editBtn.addEventListener("click", () => handleTransferEdit(tr.id));
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "btn-delete";
+    deleteBtn.textContent = "Delete";
+    deleteBtn.addEventListener("click", () => handleTransferDelete(tr.id));
+
+    actions.append(editBtn, deleteBtn);
+    row.append(info, amountSpan, actions);
+    list.appendChild(row);
+  });
+}
+
+/**
+ * Populates the transfer form with an existing transfer's values
+ * so the user can edit it in place.
+ *
+ * @param {string} id - The id of the transfer to edit.
+ * @returns {void}
+ */
+function handleTransferEdit(id) {
+  const transfers = getTransfers();
+  const tr = transfers.find((t) => t.id === id);
+  if (!tr) return;
+
+  document.getElementById("from-account").value = tr.fromAccountId;
+  document.getElementById("to-account").value = tr.toAccountId;
+  document.getElementById("transfer-amount").value = tr.amount;
+  document.getElementById("transfer-date").value = tr.date;
+  editingTransferId = id;
+
+  updateTransferAccountConstraints();
+  document.getElementById("cancel-transfer-edit-btn").style.display = "inline-block";
+  document.querySelector("#transfer-form button[type='submit']").textContent =
+    "Update Transfer";
+}
+
+/**
+ * Removes a transfer from storage and re-renders.
+ *
+ * @param {string} id - The id of the transfer to delete.
+ * @returns {void}
+ */
+function handleTransferDelete(id) {
+  const transfers = getTransfers().filter((t) => t.id !== id);
+  saveTransfers(transfers);
+  if (id === editingTransferId) {
+    handleCancelTransferEdit();
+  }
+  renderTransfers();
+  renderCurrentBalance();
+  document.getElementById("projected-balance-display").textContent = "";
+  if (balanceChart) {
+    balanceChart.destroy();
+    balanceChart = null;
+  }
+}
+
+/**
+ * Resets the transfer form back to "add new" mode.
+ *
+ * @returns {void}
+ */
+function handleCancelTransferEdit() {
+  document.getElementById("transfer-form").reset();
+  editingTransferId = null;
+  document.getElementById("transfer-form-error").textContent = "";
+  document.getElementById("cancel-transfer-edit-btn").style.display = "none";
+  document.querySelector("#transfer-form button[type='submit']").textContent =
+    "Add Transfer";
+  updateTransferAccountConstraints();
+}
+
+/**
+ * Handles the transfer-form submit event.
+ *
+ * Validates that from and to accounts differ, then either updates an
+ * existing transfer or appends a new one. Persists, re-renders, resets
+ * the form, and clears editing state.
+ *
+ * @param {SubmitEvent} e
+ * @returns {void}
+ */
+function handleTransferFormSubmit(e) {
+  e.preventDefault();
+
+  const errorEl = document.getElementById("transfer-form-error");
+  errorEl.textContent = "";
+
+  const fromAccountId = document.getElementById("from-account").value;
+  const toAccountId = document.getElementById("to-account").value;
+  const amount = Number(document.getElementById("transfer-amount").value);
+  const date = document.getElementById("transfer-date").value;
+
+  if (fromAccountId === toAccountId) {
+    errorEl.textContent = "From and To accounts must be different.";
+    return;
+  }
+
+  const transfer = {
+    id: editingTransferId ?? crypto.randomUUID(),
+    fromAccountId,
+    toAccountId,
+    amount,
+    date,
+  };
+
+  const transfers = getTransfers();
+
+  if (editingTransferId) {
+    const idx = transfers.findIndex((t) => t.id === editingTransferId);
+    if (idx !== -1) {
+      transfers[idx] = transfer;
+    }
+  } else {
+    transfers.push(transfer);
+  }
+
+  saveTransfers(transfers);
+  renderTransfers();
+  renderCurrentBalance();
+  document.getElementById("projected-balance-display").textContent = "";
+  if (balanceChart) {
+    balanceChart.destroy();
+    balanceChart = null;
+  }
+  e.target.reset();
+  editingTransferId = null;
+  document.getElementById("cancel-transfer-edit-btn").style.display = "none";
+  document.querySelector("#transfer-form button[type='submit']").textContent =
+    "Add Transfer";
+  updateTransferAccountConstraints();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Bootstrap                                                         */
 /* ------------------------------------------------------------------ */
 
@@ -572,9 +825,23 @@ document.addEventListener("DOMContentLoaded", () => {
   renderAccountList();
   renderAccountSelector();
   renderTxAccountOptions();
+  renderTransferAccountOptions();
+  renderTransfers();
 
   const form = document.getElementById("transaction-form");
   form.addEventListener("submit", handleFormSubmit);
+
+  document.getElementById("transfer-form")
+    .addEventListener("submit", handleTransferFormSubmit);
+
+  document.getElementById("cancel-transfer-edit-btn")
+    .addEventListener("click", handleCancelTransferEdit);
+
+  document.getElementById("from-account")
+    .addEventListener("change", updateTransferAccountConstraints);
+
+  document.getElementById("to-account")
+    .addEventListener("change", updateTransferAccountConstraints);
 
   document.getElementById("account-form")
     .addEventListener("submit", handleAccountFormSubmit);
