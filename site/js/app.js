@@ -252,6 +252,9 @@ async function renderCurrentBalance() {
     const el = document.getElementById("current-balance");
     const sign = balance < 0 ? "-" : "";
     el.textContent = `Current balance: ${sign}$${Math.abs(balance).toFixed(2)}`;
+    el.classList.remove("balance-updated");
+    void el.offsetWidth;
+    el.classList.add("balance-updated");
   } catch (err) {
     document.getElementById("current-balance").textContent =
       "Unable to calculate balance.";
@@ -343,6 +346,11 @@ async function renderBalanceChart() {
     }
 
     const ctx = document.getElementById("balance-chart").getContext("2d");
+
+    const gradient = ctx.createLinearGradient(0, 0, ctx.canvas.width, 0);
+    gradient.addColorStop(0, "#12172B");
+    gradient.addColorStop(1, "#F0A868");
+
     balanceChart = new Chart(ctx, {
       type: "line",
       data: {
@@ -351,8 +359,48 @@ async function renderBalanceChart() {
           {
             label: "Projected Balance",
             data: series.map((point) => point.balance),
+            borderColor: gradient,
+            borderWidth: 2.5,
+            pointBackgroundColor: "#F0A868",
+            pointBorderColor: "#1B2242",
+            pointRadius: 0,
+            pointHoverRadius: 5,
+            tension: 0.3,
+            fill: false,
           },
         ],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            labels: {
+              color: "#9AA0B4",
+              font: { family: "'IBM Plex Mono', monospace", size: 11 },
+            },
+          },
+        },
+        scales: {
+          x: {
+            ticks: {
+              color: "#9AA0B4",
+              font: { family: "'IBM Plex Mono', monospace", size: 10 },
+              maxRotation: 45,
+            },
+            grid: {
+              color: "rgba(244, 241, 234, 0.06)",
+            },
+          },
+          y: {
+            ticks: {
+              color: "#9AA0B4",
+              font: { family: "'IBM Plex Mono', monospace", size: 10 },
+            },
+            grid: {
+              color: "rgba(244, 241, 234, 0.06)",
+            },
+          },
+        },
       },
     });
   } catch (err) {
