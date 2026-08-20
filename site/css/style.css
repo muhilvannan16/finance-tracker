@@ -140,6 +140,11 @@ body {
   margin-bottom: 0.75rem;
 }
 
+#transfer-form-error {
+  color: var(--expense);
+  font-size: 0.8rem;
+}
+
 #balance-chart {
   max-height: 260px;
   margin-top: 0.5rem;
@@ -154,6 +159,18 @@ form#transaction-form {
 }
 
 form#transaction-form .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+form#transfer-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+form#transfer-form .form-field {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
@@ -263,6 +280,25 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 #cancel-edit-btn:hover {
+  border-color: var(--muted);
+  color: var(--text);
+}
+
+#cancel-transfer-edit-btn {
+  grid-column: 1 / -1;
+  padding: 0.5rem 1rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid rgba(244, 241, 234, 0.12);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color var(--transition), color var(--transition);
+}
+
+#cancel-transfer-edit-btn:hover {
   border-color: var(--muted);
   color: var(--text);
 }
@@ -416,6 +452,68 @@ input:-webkit-autofill:focus {
   color: var(--muted);
 }
 
+/* ---- Transfer List ---- */
+
+#transfer-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.transfer-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid rgba(244, 241, 234, 0.06);
+  transition: background var(--transition);
+}
+
+.transfer-row:last-child {
+  border-bottom: none;
+}
+
+.transfer-row:hover {
+  background: rgba(244, 241, 234, 0.03);
+  margin: 0 -0.75rem;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  border-radius: 6px;
+}
+
+.transfer-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.transfer-accounts {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.transfer-date {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.transfer-amount {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  min-width: 5.5rem;
+  text-align: right;
+  color: var(--accent);
+}
+
+.transfer-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
 /* ---- Focus visible (keyboard) ---- */
 
 :focus-visible {
@@ -474,6 +572,10 @@ select:focus-visible {
   }
 
   form#transaction-form {
+    grid-template-columns: 1fr;
+  }
+
+  form#transfer-form {
     grid-template-columns: 1fr;
   }
 
