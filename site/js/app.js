@@ -716,6 +716,9 @@ function handleTransferEdit(id) {
 function handleTransferDelete(id) {
   const transfers = getTransfers().filter((t) => t.id !== id);
   saveTransfers(transfers);
+  if (id === editingTransferId) {
+    handleCancelTransferEdit();
+  }
   renderTransfers();
   renderCurrentBalance();
   document.getElementById("projected-balance-display").textContent = "";
