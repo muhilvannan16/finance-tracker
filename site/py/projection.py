@@ -42,12 +42,25 @@ def count_monthly_occurrences(start_date, as_of_date):
 
     return month_count
 
+def parse_dated_records(json_str):
+    """
+    Parses a JSON string of records (transactions or transfers) and
+    returns a new list where each record's "date" field has been
+    converted from a string to a real date object. Works for either
+    transactions or transfers, since both have a "date" field.
+    """
+    records = json.loads(json_str)
+    return [
+        {**record, "date": date.fromisoformat(record["date"])}
+        for record in records
+    ]
 
-def projected_balance(transactions, starting_balance, as_of_date):
+def projected_balance(transactions, transfers, starting_balance, as_of_date, account_id):
     """
     Calculates the projected balance as of as_of_date, given a starting
-    balance and a list of transaction dicts (keys: amount, direction,
-    date, frequency).
+    balance, a list of transaction dicts (keys: amount, direction, date,
+    frequency), a list of transfer dicts (keys: fromAccountId, toAccountId,
+    amount, date), and the id of the account being calculated for.
     """
     balance = starting_balance
 
@@ -64,32 +77,22 @@ def projected_balance(transactions, starting_balance, as_of_date):
             occurrences = count_monthly_occurrences(transaction_date, as_of_date)
             balance += occurrences * (amount if direction == "income" else -amount)
 
+    for transfer in transfers:
+        transfer_date = transfer['date']
+        if transfer_date <= as_of_date:
+            if transfer['fromAccountId'] == account_id:
+                balance -= transfer['amount']
+            elif transfer['toAccountId'] == account_id:
+                balance += transfer['amount']
+
     return balance
 
-def project_from_json(transactions_json, starting_balance, as_of_date_str):
-    """
-    JSON-friendly entry point, callable from JavaScript.
-
-    transactions_json: a JSON string of transaction objects, exactly as
-        stored by storage.js (dates as "YYYY-MM-DD" strings).
-    starting_balance: a plain number.
-    as_of_date_str: the target date as an ISO string, e.g. "2026-06-01".
-
-    Returns the projected balance as a plain number.
-    """
-
-    transactions = json.loads(transactions_json)
-
-    converted_transactions = []
-    for transaction in transactions:
-        converted_transactions.append({
-            **transaction,
-            "date": date.fromisoformat(transaction["date"]),
-        })
-
+def project_from_json(transactions_json, transfers_json, starting_balance, as_of_date_str, account_id):
+    transactions = parse_dated_records(transactions_json)
+    transfers = parse_dated_records(transfers_json)
     as_of_date = date.fromisoformat(as_of_date_str)
 
-    return projected_balance(converted_transactions, starting_balance, as_of_date)
+    return projected_balance(transactions, transfers, starting_balance, as_of_date, account_id)
 
 def add_one_month(d):
     """
@@ -109,11 +112,11 @@ def add_one_month(d):
         day = last_day_of_target_month
     return date(year, month, day)
 
-def balance_series(transactions, starting_balance, start_date, end_date):
+def balance_series(transactions, transfers, starting_balance, start_date, end_date, account_id):
     """
     Computes the projected balance at monthly checkpoints from start_date
     up through end_date (inclusive of the last checkpoint that doesn't
-    exceed end_date).
+    exceed end_date), for the given account_id.
 
     Each checkpoint's day-of-month is anchored to start_date's own day,
     clamped independently against each month's real length — never
@@ -138,37 +141,25 @@ def balance_series(transactions, starting_balance, start_date, end_date):
         if current_date > end_date:
             break
 
-        balance = projected_balance(transactions, starting_balance, current_date)
+        balance = projected_balance(
+            transactions, transfers, starting_balance, current_date, account_id
+        )
         checkpoints.append((current_date, balance))
         month_offset += 1
 
     return checkpoints
 
-def balance_series_json(transactions_json, starting_balance, start_date_str, end_date_str):
+def balance_series_json(transactions_json, transfers_json, starting_balance, start_date_str, end_date_str, account_id):
     """
     JSON-friendly entry point for balance_series, callable from JavaScript.
-
-    transactions_json: a JSON string of transaction objects, exactly as
-        stored by storage.js (dates as "YYYY-MM-DD" strings).
-    starting_balance: a plain number.
-    start_date_str: the series' first checkpoint date, as an ISO string.
-    end_date_str: the series' last possible checkpoint date, as an ISO string.
-
-    Returns a JSON string: a list of objects, each shaped like
-        {"date": "2026-01-31", "balance": 1000}
-    ready for a JS charting library to consume directly.
     """
+    transactions = parse_dated_records(transactions_json)
+    transfers = parse_dated_records(transfers_json)
+    start_date = date.fromisoformat(start_date_str)
+    end_date = date.fromisoformat(end_date_str)
 
-    transactions = json.loads(transactions_json)
-
-    converted_transactions = []
-    for transaction in transactions:
-        converted_transactions.append({
-            **transaction,
-            "date": date.fromisoformat(transaction["date"])
-        })
-    as_of_date = date.fromisoformat(end_date_str)
-
-    checkpoints = balance_series(converted_transactions, starting_balance, date.fromisoformat(start_date_str), as_of_date)
+    checkpoints = balance_series(
+        transactions, transfers, starting_balance, start_date, end_date, account_id
+    )
     return json.dumps([{"date": d.isoformat(), "balance": b} for d, b in checkpoints])
 

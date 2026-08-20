@@ -3,6 +3,7 @@ import {
   saveTransactions,
   getAccounts,
   saveAccounts,
+  getTransfers,
 } from "./storage.js";
 import { loadProjectionEngine, getProjectedBalance, getBalanceSeries } from "./pyBridge.js";
 
@@ -44,6 +45,139 @@ function seedDefaultAccount() {
 }
 
 /**
+ * Populates #account-selector with an <option> per account.
+ * Preserves the current selection if the selected account still exists.
+ *
+ * @returns {void}
+ */
+function renderAccountSelector() {
+  const selector = document.getElementById("account-selector");
+  const previousValue = selector.value;
+  const accounts = getAccounts();
+
+  selector.innerHTML = "";
+  accounts.forEach((acct) => {
+    const opt = document.createElement("option");
+    opt.value = acct.id;
+    opt.textContent = acct.name;
+    selector.appendChild(opt);
+  });
+
+  if (accounts.some((a) => a.id === previousValue)) {
+    selector.value = previousValue;
+  }
+}
+
+/**
+ * Renders every stored account into the #account-list container,
+ * showing name and starting balance.
+ *
+ * @returns {void}
+ */
+function renderAccountList() {
+  const list = document.getElementById("account-list");
+  list.innerHTML = "";
+
+  const accounts = getAccounts();
+
+  accounts.forEach((acct) => {
+    const row = document.createElement("div");
+    row.className = "account-row";
+
+    const info = document.createElement("div");
+    info.className = "account-info";
+
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "acct-name";
+    nameSpan.textContent = acct.name;
+
+    const balSpan = document.createElement("span");
+    balSpan.className = "acct-balance";
+    const sign = acct.startingBalance < 0 ? "-" : "";
+    balSpan.textContent = `Starting: ${sign}$${Math.abs(acct.startingBalance).toFixed(2)}`;
+
+    info.append(nameSpan, balSpan);
+    row.appendChild(info);
+    list.appendChild(row);
+  });
+}
+
+/**
+ * Populates #tx-account with an <option> per account, matching
+ * renderAccountSelector's logic.
+ *
+ * @returns {void}
+ */
+function renderTxAccountOptions() {
+  const selector = document.getElementById("tx-account");
+  const previousValue = selector.value;
+  const accounts = getAccounts();
+
+  selector.innerHTML = "";
+  accounts.forEach((acct) => {
+    const opt = document.createElement("option");
+    opt.value = acct.id;
+    opt.textContent = acct.name;
+    selector.appendChild(opt);
+  });
+
+  if (accounts.some((a) => a.id === previousValue)) {
+    selector.value = previousValue;
+  }
+}
+
+/**
+ * Handles the account-form submit event.
+ *
+ * Reads name and starting balance, builds an account object, appends it
+ * to the accounts array, persists, re-renders all account-related UI,
+ * and resets the form.
+ *
+ * @param {SubmitEvent} e
+ * @returns {void}
+ */
+function handleAccountFormSubmit(e) {
+  e.preventDefault();
+
+  const name = document.getElementById("account-name").value.trim();
+  const startingBalance = Number(
+    document.getElementById("account-starting-balance").value
+  );
+
+  const account = {
+    id: crypto.randomUUID(),
+    name,
+    startingBalance,
+  };
+
+  const accounts = getAccounts();
+  accounts.push(account);
+  saveAccounts(accounts);
+
+  renderAccountList();
+  renderAccountSelector();
+  renderTxAccountOptions();
+  e.target.reset();
+}
+
+/**
+ * Returns the starting balance, filtered transactions, all transfers, and
+ * the account id for the account currently selected in #account-selector.
+ *
+ * @returns {{ startingBalance: number, transactions: Array, transfers: Array,
+ *   accountId: string }} The selected account's context for projection
+ *   calculations.
+ */
+function getSelectedAccountContext() {
+  const selectedId = document.getElementById("account-selector").value;
+  const account = getAccounts().find((a) => a.id === selectedId);
+  const startingBalance = account ? account.startingBalance : 0;
+  const transactions = getTransactions().filter((t) => t.accountId === selectedId);
+  const transfers = getTransfers();
+  return { startingBalance, transactions, transfers, accountId: selectedId };
+}
+
+/**
  * Renders every stored transaction into the #transaction-list container.
  *
  * Clears the container first, then creates one row per transaction showing
@@ -58,6 +192,7 @@ function renderTransactions() {
   list.innerHTML = "";
 
   const transactions = getTransactions();
+  const accounts = getAccounts();
 
   transactions.forEach((tx) => {
     const row = document.createElement("div");
@@ -78,7 +213,12 @@ function renderTransactions() {
     dateSpan.className = "tx-date";
     dateSpan.textContent = tx.date;
 
-    info.append(labelSpan, categorySpan, dateSpan);
+    const accountMatch = accounts.find((a) => a.id === tx.accountId);
+    const accountSpan = document.createElement("span");
+    accountSpan.className = "tx-account";
+    accountSpan.textContent = accountMatch ? accountMatch.name : tx.accountId;
+
+    info.append(labelSpan, categorySpan, accountSpan, dateSpan);
 
     const amountSpan = document.createElement("span");
     const isIncome = tx.direction === "income";
@@ -123,6 +263,7 @@ function handleEdit(id) {
   document.getElementById("direction").value = tx.direction;
   document.getElementById("date").value = tx.date;
   document.getElementById("frequency").value = tx.frequency;
+  document.getElementById("tx-account").value = tx.accountId;
   editingId = id;
 
   document.getElementById("cancel-edit-btn").style.display = "inline-block";
@@ -182,6 +323,7 @@ function handleFormSubmit(e) {
   const direction = document.getElementById("direction").value;
   const date = document.getElementById("date").value;
   const frequency = document.getElementById("frequency").value;
+  const accountId = document.getElementById("tx-account").value;
 
   const transaction = {
     id: editingId ?? crypto.randomUUID(),
@@ -190,7 +332,7 @@ function handleFormSubmit(e) {
     amount,
     direction,
     date,
-    accountId: "main",
+    accountId,
     frequency,
   };
 
@@ -239,14 +381,14 @@ async function renderCurrentBalance() {
       "-" +
       String(now.getDate()).padStart(2, "0");
 
-    const account = getAccounts().find((a) => a.id === "main");
-    const startingBalance = account ? account.startingBalance : 0;
-    const transactions = getTransactions();
+    const { startingBalance, transactions, transfers, accountId } = getSelectedAccountContext();
 
     const balance = await getProjectedBalance(
       transactions,
+      transfers,
       startingBalance,
-      todayStr
+      todayStr,
+      accountId
     );
 
     const el = document.getElementById("current-balance");
@@ -281,14 +423,14 @@ async function renderProjectedBalance() {
   try {
     await engineReadyPromise;
 
-    const account = getAccounts().find((a) => a.id === "main");
-    const startingBalance = account ? account.startingBalance : 0;
-    const transactions = getTransactions();
+    const { startingBalance, transactions, transfers, accountId } = getSelectedAccountContext();
 
     const balance = await getProjectedBalance(
       transactions,
+      transfers,
       startingBalance,
-      dateValue
+      dateValue,
+      accountId
     );
 
     const sign = balance < 0 ? "-" : "";
@@ -330,15 +472,15 @@ async function renderBalanceChart() {
       return;
     }  
 
-    const account = getAccounts().find((a) => a.id === "main");
-    const startingBalance = account ? account.startingBalance : 0;
-    const transactions = getTransactions();
+    const { startingBalance, transactions, transfers, accountId } = getSelectedAccountContext();
 
     const series = await getBalanceSeries(
       transactions,
+      transfers,
       startingBalance,
       todayStr,
-      dateValue
+      dateValue,
+      accountId
     );
 
     if (balanceChart) {
@@ -427,12 +569,28 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
   seedDefaultAccount();
+  renderAccountList();
+  renderAccountSelector();
+  renderTxAccountOptions();
 
   const form = document.getElementById("transaction-form");
   form.addEventListener("submit", handleFormSubmit);
 
+  document.getElementById("account-form")
+    .addEventListener("submit", handleAccountFormSubmit);
+
   document.getElementById("cancel-edit-btn")
     .addEventListener("click", handleCancelEdit);
+
+  document.getElementById("account-selector")
+    .addEventListener("change", () => {
+      renderCurrentBalance();
+      document.getElementById("projected-balance-display").textContent = "";
+      if (balanceChart) {
+        balanceChart.destroy();
+        balanceChart = null;
+      }
+    });
 
   document.getElementById("calculate-projection-btn")
     .addEventListener("click", renderProjectedBalance);

@@ -61,16 +61,20 @@ export async function loadProjectionEngine() {
  *
  * @param {Array<object>} transactions - Transaction objects (same shape
  *   that storage.js produces).
+ * @param {Array<object>} transfers - Transfer objects (same shape that
+ *   storage.js produces).
  * @param {number} startingBalance - The account's starting balance.
  * @param {string} asOfDateStr - ISO date string (e.g. "2026-06-01") to
  *   project up to.
+ * @param {string} accountId - The account to project for.
  * @returns {Promise<number>} The projected balance as a plain JS number.
  */
-export async function getProjectedBalance(transactions, startingBalance, asOfDateStr) {
+export async function getProjectedBalance(transactions, transfers, startingBalance, asOfDateStr, accountId) {
   const pyodide = await getPyodide();
-  const json = JSON.stringify(transactions);
+  const transactionsJson = JSON.stringify(transactions);
+  const transfersJson = JSON.stringify(transfers);
   const projectFromJson = pyodide.globals.get("project_from_json");
-  return projectFromJson(json, startingBalance, asOfDateStr);
+  return projectFromJson(transactionsJson, transfersJson, startingBalance, asOfDateStr, accountId);
 }
 
 /**
@@ -82,18 +86,22 @@ export async function getProjectedBalance(transactions, startingBalance, asOfDat
  *
  * @param {Array<object>} transactions - Transaction objects (same shape
  *   that storage.js produces).
+ * @param {Array<object>} transfers - Transfer objects (same shape that
+ *   storage.js produces).
  * @param {number} startingBalance - The account's starting balance.
  * @param {string} startDateStr - ISO date string for the series start
  *   (e.g. "2026-06-01").
  * @param {string} endDateStr - ISO date string for the series end
  *   (e.g. "2026-12-31").
+ * @param {string} accountId - The account to project for.
  * @returns {Promise<Array<{date: string, balance: number}>>} Daily
  *   balance points.
  */
-export async function getBalanceSeries(transactions, startingBalance, startDateStr, endDateStr) {
+export async function getBalanceSeries(transactions, transfers, startingBalance, startDateStr, endDateStr, accountId) {
   const pyodide = await getPyodide();
-  const json = JSON.stringify(transactions);
+  const transactionsJson = JSON.stringify(transactions);
+  const transfersJson = JSON.stringify(transfers);
   const balanceSeriesJson = pyodide.globals.get("balance_series_json");
-  const resultJson = balanceSeriesJson(json, startingBalance, startDateStr, endDateStr);
+  const resultJson = balanceSeriesJson(transactionsJson, transfersJson, startingBalance, startDateStr, endDateStr, accountId);
   return JSON.parse(resultJson);
 }

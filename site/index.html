@@ -18,6 +18,7 @@
       <h1>finance-tracker</h1>
       <p id="engine-status">Loading calculation engine…</p>
       <p id="current-balance"></p>
+      <select id="account-selector"></select>
     </header>
 
     <hr class="horizon-line">
@@ -36,6 +37,22 @@
       </div>
       <p id="projected-balance-display"></p>
       <canvas id="balance-chart"></canvas>
+    </div>
+
+    <div class="card">
+      <h2>Accounts</h2>
+      <div id="account-list"></div>
+      <form id="account-form">
+        <div class="form-field">
+          <label for="account-name">Name</label>
+          <input type="text" id="account-name" required>
+        </div>
+        <div class="form-field">
+          <label for="account-starting-balance">Starting Balance</label>
+          <input type="number" id="account-starting-balance" step="0.01" value="0" required>
+        </div>
+        <button type="submit" class="btn-primary">Add Account</button>
+      </form>
     </div>
 
     <div class="card">
@@ -75,6 +92,11 @@
             <option value="none">None</option>
             <option value="monthly">Monthly</option>
           </select>
+        </div>
+
+        <div class="form-field">
+          <label for="tx-account">Account</label>
+          <select id="tx-account" required></select>
         </div>
 
         <button type="submit" class="btn-primary">Add Transaction</button>
