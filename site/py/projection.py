@@ -60,7 +60,7 @@ def projected_balance(transactions, transfers, starting_balance, as_of_date, acc
     Calculates the projected balance as of as_of_date, given a starting
     balance, a list of transaction dicts (keys: amount, direction, date,
     frequency), a list of transfer dicts (keys: fromAccountId, toAccountId,
-    amount, date), and the id of the account being calculated for.
+    amount, date), and the id of the account being calculated for, also filters by account_id.
     """
     balance = starting_balance
 
@@ -70,13 +70,15 @@ def projected_balance(transactions, transfers, starting_balance, as_of_date, acc
         transaction_date = transaction['date']
         frequency = transaction['frequency']
 
+        if transaction['accountId'] != account_id:
+            continue
+
         if frequency == "none":
             if transaction_occurred_by(transaction_date, as_of_date):
                 balance += amount if direction == "income" else -amount
         elif frequency == "monthly":
             occurrences = count_monthly_occurrences(transaction_date, as_of_date)
             balance += occurrences * (amount if direction == "income" else -amount)
-
     for transfer in transfers:
         transfer_date = transfer['date']
         if transfer_date <= as_of_date:
@@ -162,4 +164,6 @@ def balance_series_json(transactions_json, transfers_json, starting_balance, sta
         transactions, transfers, starting_balance, start_date, end_date, account_id
     )
     return json.dumps([{"date": d.isoformat(), "balance": b} for d, b in checkpoints])
+
+
 

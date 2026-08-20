@@ -161,7 +161,7 @@ function handleAccountFormSubmit(e) {
 }
 
 /**
- * Returns the starting balance, filtered transactions, all transfers, and
+ * Returns the starting balance, all transactions, all transfers, and
  * the account id for the account currently selected in #account-selector.
  *
  * @returns {{ startingBalance: number, transactions: Array, transfers: Array,
@@ -172,7 +172,7 @@ function getSelectedAccountContext() {
   const selectedId = document.getElementById("account-selector").value;
   const account = getAccounts().find((a) => a.id === selectedId);
   const startingBalance = account ? account.startingBalance : 0;
-  const transactions = getTransactions().filter((t) => t.accountId === selectedId);
+  const transactions = getTransactions();
   const transfers = getTransfers();
   return { startingBalance, transactions, transfers, accountId: selectedId };
 }
