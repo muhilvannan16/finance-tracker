@@ -363,7 +363,7 @@ async function renderBalanceChart() {
             borderWidth: 2.5,
             pointBackgroundColor: "#F0A868",
             pointBorderColor: "#1B2242",
-            pointRadius: 0,
+            pointRadius: series.length === 1 ? 5 : 0,
             pointHoverRadius: 5,
             tension: 0.3,
             fill: false,
