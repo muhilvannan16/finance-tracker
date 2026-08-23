@@ -959,6 +959,28 @@ function renderRecurringSuggestions() {
 }
 
 /**
+ * Returns the date exactly one calendar month after dateStr
+ * ("YYYY-MM-DD"), clamped to the target month's last valid day if
+ * the original day doesn't exist there (e.g. Jan 31 -> Feb 28).
+ * Mirrors projection.py's add_one_month.
+ * @param {string} dateStr
+ * @returns {string} The resulting date as "YYYY-MM-DD".
+ */
+function addOneMonth(dateStr) {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  let newYear = year;
+  let newMonth = month + 1;
+  if (newMonth > 12) {
+    newMonth = 1;
+    newYear += 1;
+  }
+  const lastDayOfTargetMonth = new Date(newYear, newMonth, 0).getDate();
+  const newDay = Math.min(day, lastDayOfTargetMonth);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${newYear}-${pad(newMonth)}-${pad(newDay)}`;
+}
+
+/**
  * Accepts a recurring-charge suggestion: creates a new monthly
  * transaction based on the latest matched transaction, marks all
  * matched ids as handled, removes the suggestion from the pending
@@ -992,7 +1014,7 @@ function handleAcceptRecurringSuggestion(suggestion) {
     category: latest.category,
     amount: latest.amount,
     direction: latest.direction,
-    date: latest.date,
+    date: addOneMonth(latest.date),
     accountId: latest.accountId,
     frequency: "monthly",
   };
