@@ -61,8 +61,14 @@ A personal finance tracker that runs entirely in your browser — multi-account 
 
 ## Screenshot
 
-<!-- TODO: add a real screenshot of the running app here -->
-![screenshot](docs/screenshot.png)
+Multi-account balance tracking with client-side Python projections:
+![Dashboard](docs/screenshot-dashboard.png)
+
+Rule-based and AI-assisted recurring charge detection, surfaced as actionable suggestions:
+![Recurring Suggestions](docs/screenshot-recurring.png)
+
+Transfers between accounts, tracked separately from income/expense transactions:
+![Transfers](docs/screenshot-transfers.png)
 
 ---
 
