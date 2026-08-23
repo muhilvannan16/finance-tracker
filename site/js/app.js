@@ -5,8 +5,13 @@ import {
   saveAccounts,
   getTransfers,
   saveTransfers,
+  getHandledRecurringIds,
+  saveHandledRecurringIds,
 } from "./storage.js";
-import { loadProjectionEngine, getProjectedBalance, getBalanceSeries } from "./pyBridge.js";
+import { loadProjectionEngine, getProjectedBalance, getBalanceSeries, loadRecurringEngine, findRecurringGroups } from "./pyBridge.js";
+import { detectRecurringWithAI } from "./aiSuggestions.js";
+
+export const AI_API_KEY_STORAGE_KEY = "finance-tracker:aiApiKey";
 
 /**
  * The id of the transaction currently being edited, or null if the form
@@ -23,6 +28,14 @@ let editingId = null;
 let engineReadyPromise = null;
 
 /**
+ * Promise that resolves once the recurring-detection engine
+ * (recurring.py) has finished loading. Set in the DOMContentLoaded
+ * listener, independent of engineReadyPromise (projection.py).
+ * @type {Promise<void> | null}
+ */
+let recurringEngineReadyPromise = null;
+
+/**
  * The active Chart.js instance for the balance chart, or null if no
  * chart is currently rendered.
  * @type {object | null}
@@ -35,6 +48,18 @@ let balanceChart = null;
  * @type {string | null}
  */
 let editingTransferId = null;
+
+/**
+ * Recurring-charge suggestions currently pending user action (accept
+ * or dismiss). Each item has the shape
+ * { normalizedLabel, matchedTransactionIds, confidence }. Removal from
+ * this array is done by reference equality (the exact object instance),
+ * not by id, since suggestions are only ever populated once per
+ * detection run and never rebuilt mid-session.
+ * @type {Array<{normalizedLabel: string, matchedTransactionIds: string[],
+ *   confidence: number}>}
+ */
+let pendingRecurringSuggestions = [];
 
 /**
  * Ensures a default "Main" account exists in storage.
@@ -805,6 +830,312 @@ function handleTransferFormSubmit(e) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Recurring-suggestion handlers                                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Runs the full recurring-charge detection pipeline: loads handled ids,
+ * filters to unhandled transactions, runs the rule-based Pyodide engine,
+ * then sends leftovers to the AI detector. Merges both result sets into
+ * pendingRecurringSuggestions and re-renders.
+ *
+ * @returns {Promise<void>}
+ */
+async function runRecurringDetection() {
+  await recurringEngineReadyPromise;
+
+  const transactions = getTransactions();
+  const handledSet = new Set(getHandledRecurringIds());
+  const unhandledTransactions = transactions.filter((t) => !handledSet.has(t.id));
+
+  const ruleGroups = await findRecurringGroups(unhandledTransactions);
+
+  const ruleSuggestions = ruleGroups.map((group) => {
+    const firstMatch = unhandledTransactions.find(
+      (t) => t.id === group.matchedTransactionIds[0]
+    );
+    return {
+      normalizedLabel: firstMatch ? firstMatch.label : "Unknown",
+      matchedTransactionIds: group.matchedTransactionIds,
+      confidence: 1.0,
+      source: "rule",
+    };
+  });
+
+  const claimedByRules = new Set(
+    ruleSuggestions.flatMap((s) => s.matchedTransactionIds)
+  );
+
+  function isWithinLastSixMonths(dateStr) {
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - 6);
+    return new Date(dateStr) >= cutoff;
+  }
+
+  const leftovers = unhandledTransactions.filter(
+    (t) => !claimedByRules.has(t.id) && isWithinLastSixMonths(t.date)
+  );
+
+  const aiResult = await detectRecurringWithAI(leftovers);
+  const aiSuggestions = aiResult.suggestions.map((s) => ({
+    ...s,
+    source: "ai",
+  }));
+
+  pendingRecurringSuggestions = [...ruleSuggestions, ...aiSuggestions];
+  renderRecurringSuggestions();
+}
+
+/**
+ * Renders the current pendingRecurringSuggestions list into the
+ * #recurring-suggestions-list container. Clears existing content, shows
+ * an empty-state message when no suggestions are pending, and otherwise
+ * builds one .suggestion-banner per suggestion with Dismiss/Accept buttons.
+ * @returns {void}
+ */
+function renderRecurringSuggestions() {
+  const list = document.getElementById("recurring-suggestions-list");
+  list.innerHTML = "";
+
+  if (pendingRecurringSuggestions.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "suggestion-empty";
+    empty.textContent = "No recurring charges detected right now.";
+    list.appendChild(empty);
+    return;
+  }
+
+  for (const suggestion of pendingRecurringSuggestions) {
+    const banner = document.createElement("div");
+    banner.className = "suggestion-banner";
+
+    const info = document.createElement("div");
+    info.className = "suggestion-info";
+
+    const label = document.createElement("span");
+    label.className = "suggestion-label";
+    label.textContent = suggestion.normalizedLabel;
+
+    const meta = document.createElement("span");
+    meta.className = "suggestion-meta";
+    const matchCount = suggestion.matchedTransactionIds.length;
+    if (suggestion.source === "rule") {
+      meta.textContent = matchCount + " matching transactions";
+    } else {
+      const pct = Math.round(suggestion.confidence * 100);
+      meta.textContent =
+        matchCount + " matching transactions · " + pct + "% confidence · Suggested by AI";
+    }
+
+    info.appendChild(label);
+    info.appendChild(meta);
+
+    const actions = document.createElement("div");
+    actions.className = "suggestion-actions";
+
+    const dismissBtn = document.createElement("button");
+    dismissBtn.type = "button";
+    dismissBtn.className = "btn-secondary";
+    dismissBtn.textContent = "Dismiss";
+    dismissBtn.addEventListener("click", () => {
+      handleDismissRecurringSuggestion(suggestion);
+    });
+
+    const acceptBtn = document.createElement("button");
+    acceptBtn.type = "button";
+    acceptBtn.className = "btn-primary";
+    acceptBtn.textContent = "Accept";
+    acceptBtn.addEventListener("click", () => {
+      handleAcceptRecurringSuggestion(suggestion);
+    });
+
+    actions.appendChild(dismissBtn);
+    actions.appendChild(acceptBtn);
+
+    banner.appendChild(info);
+    banner.appendChild(actions);
+    list.appendChild(banner);
+  }
+}
+
+/**
+ * Accepts a recurring-charge suggestion: creates a new monthly
+ * transaction based on the latest matched transaction, marks all
+ * matched ids as handled, removes the suggestion from the pending
+ * list, and re-renders.
+ *
+ * @param {{normalizedLabel: string, matchedTransactionIds: string[],
+ *   confidence: number}} suggestion
+ * @returns {void}
+ */
+function handleAcceptRecurringSuggestion(suggestion) {
+  const { matchedTransactionIds } = suggestion;
+
+  const transactions = getTransactions();
+  const matched = transactions.filter((t) => matchedTransactionIds.includes(t.id));
+
+  if (matched.length < 2) {
+    console.warn(
+      "Recurring suggestion is stale (matched transactions were deleted or modified); removing it.",
+      suggestion
+    );
+    pendingRecurringSuggestions = pendingRecurringSuggestions.filter((s) => s !== suggestion);
+    renderRecurringSuggestions();
+    return;
+  }
+
+  const latest = matched.reduce((a, b) => (b.date > a.date ? b : a));
+
+  const newTransaction = {
+    id: crypto.randomUUID(),
+    label: latest.label,
+    category: latest.category,
+    amount: latest.amount,
+    direction: latest.direction,
+    date: latest.date,
+    accountId: latest.accountId,
+    frequency: "monthly",
+  };
+
+  transactions.push(newTransaction);
+  saveTransactions(transactions);
+
+  const handledIds = getHandledRecurringIds();
+  saveHandledRecurringIds([...handledIds, ...matchedTransactionIds]);
+
+  pendingRecurringSuggestions = pendingRecurringSuggestions.filter(
+    (s) => s !== suggestion
+  );
+
+  renderTransactions();
+  renderCurrentBalance();
+  document.getElementById("projected-balance-display").textContent = "";
+  if (balanceChart) {
+    balanceChart.destroy();
+    balanceChart = null;
+  }
+  renderRecurringSuggestions();
+}
+
+/**
+ * Dismisses a recurring-charge suggestion: marks all matched ids as
+ * handled without creating any transaction, removes the suggestion
+ * from the pending list, and re-renders the suggestion banners only.
+ *
+ * @param {{normalizedLabel: string, matchedTransactionIds: string[],
+ *   confidence: number}} suggestion
+ * @returns {void}
+ */
+function handleDismissRecurringSuggestion(suggestion) {
+  const { matchedTransactionIds } = suggestion;
+
+  const handledIds = getHandledRecurringIds();
+  saveHandledRecurringIds([...handledIds, ...matchedTransactionIds]);
+
+  pendingRecurringSuggestions = pendingRecurringSuggestions.filter(
+    (s) => s !== suggestion
+  );
+
+  renderRecurringSuggestions();
+}
+
+/* ------------------------------------------------------------------ */
+/*  AI Settings helpers                                               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Reads the saved API key from localStorage and updates the AI Settings
+ * card status text and Remove Key button visibility accordingly.
+ *
+ * @returns {void}
+ */
+function renderAiKeyStatus() {
+  const key = localStorage.getItem(AI_API_KEY_STORAGE_KEY);
+  const status = document.getElementById("ai-status");
+  const removeBtn = document.getElementById("remove-ai-key-btn");
+
+  if (!key) {
+    status.textContent =
+      "No AI features are enabled — add a Groq API key to use AI-assisted recurring detection";
+    removeBtn.style.display = "none";
+  } else {
+    status.textContent = "✓ AI features enabled";
+    removeBtn.style.display = "inline-block";
+  }
+}
+
+/**
+ * Toggles the API key input between password and plain-text visibility
+ * and updates the toggle button label to match.
+ *
+ * @returns {void}
+ */
+function handleToggleKeyVisibility() {
+  const input = document.getElementById("ai-api-key-input");
+  const btn = document.getElementById("toggle-key-visibility");
+
+  if (input.type === "password") {
+    input.type = "text";
+    btn.textContent = "Hide";
+  } else {
+    input.type = "password";
+    btn.textContent = "Show";
+  }
+}
+
+/**
+ * Validates and saves the API key entered in #ai-api-key-input to
+ * localStorage. Shows an inline error if the input is empty.
+ *
+ * @returns {void}
+ */
+function handleSaveAiKey() {
+  const input = document.getElementById("ai-api-key-input");
+  const errorEl = document.getElementById("ai-key-error");
+  const trimmed = input.value.trim();
+
+  if (!trimmed) {
+    errorEl.textContent = "Please enter an API key before saving.";
+    return;
+  }
+
+  errorEl.textContent = "";
+  localStorage.setItem(AI_API_KEY_STORAGE_KEY, trimmed);
+  input.value = "";
+  renderAiKeyStatus();
+}
+
+/**
+ * Shows the remove-key confirmation modal.
+ *
+ * @returns {void}
+ */
+function handleShowRemoveKeyModal() {
+  document.getElementById("remove-key-modal").style.display = "flex";
+}
+
+/**
+ * Hides the remove-key confirmation modal without taking action.
+ *
+ * @returns {void}
+ */
+function handleCancelRemoveKey() {
+  document.getElementById("remove-key-modal").style.display = "none";
+}
+
+/**
+ * Removes the saved API key from localStorage, closes the modal,
+ * and refreshes the AI status display.
+ *
+ * @returns {void}
+ */
+function handleConfirmRemoveKey() {
+  localStorage.removeItem(AI_API_KEY_STORAGE_KEY);
+  document.getElementById("remove-key-modal").style.display = "none";
+  renderAiKeyStatus();
+}
+
+/* ------------------------------------------------------------------ */
 /*  Bootstrap                                                         */
 /* ------------------------------------------------------------------ */
 
@@ -821,12 +1152,22 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Pyodide failed to load:", err);
     });
 
+  recurringEngineReadyPromise = loadRecurringEngine();
+  recurringEngineReadyPromise
+    .then(() => {
+      document.getElementById("check-recurring-btn").disabled = false;
+    })
+    .catch((err) => {
+      console.error("Recurring-detection engine failed to load:", err);
+    });
+
   seedDefaultAccount();
   renderAccountList();
   renderAccountSelector();
   renderTxAccountOptions();
   renderTransferAccountOptions();
   renderTransfers();
+  renderAiKeyStatus();
 
   const form = document.getElementById("transaction-form");
   form.addEventListener("submit", handleFormSubmit);
@@ -864,6 +1205,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("show-chart-btn")
     .addEventListener("click", renderBalanceChart);
+
+  document.getElementById("toggle-key-visibility")
+    .addEventListener("click", handleToggleKeyVisibility);
+
+  document.getElementById("save-ai-key-btn")
+    .addEventListener("click", handleSaveAiKey);
+
+  document.getElementById("remove-ai-key-btn")
+    .addEventListener("click", handleShowRemoveKeyModal);
+
+  document.getElementById("cancel-remove-key-btn")
+    .addEventListener("click", handleCancelRemoveKey);
+
+  document.getElementById("confirm-remove-key-btn")
+    .addEventListener("click", handleConfirmRemoveKey);
+
+  document.getElementById("check-recurring-btn")
+    .addEventListener("click", runRecurringDetection);
 
   renderTransactions();
 });

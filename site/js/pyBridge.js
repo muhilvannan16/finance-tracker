@@ -105,3 +105,41 @@ export async function getBalanceSeries(transactions, transfers, startingBalance,
   const resultJson = balanceSeriesJson(transactionsJson, transfersJson, startingBalance, startDateStr, endDateStr, accountId);
   return JSON.parse(resultJson);
 }
+
+/**
+ * Loads the recurring-detection engine Python source into the Pyodide
+ * runtime.
+ *
+ * Fetches "py/recurring.py" (served alongside index.html), then executes
+ * its source inside Pyodide so that all Python functions it defines —
+ * including `find_recurring_groups_json` and its helpers — become
+ * available in the global namespace.
+ *
+ * @returns {Promise<void>}
+ */
+export async function loadRecurringEngine() {
+  const pyodide = await initPyodide();
+  const response = await fetch("py/recurring.py");
+  const source = await response.text();
+  pyodide.runPython(source);
+}
+
+/**
+ * Detects recurring transaction groups by calling the Python
+ * `find_recurring_groups_json` function loaded by
+ * {@link loadRecurringEngine}.
+ *
+ * @param {Array<object>} transactions - Transaction objects (same shape
+ *   that storage.js produces).
+ * @param {number} [tolerancePct=0.063] - Fractional tolerance for amount
+ *   matching (e.g. 0.063 = 6.3%).
+ * @returns {Promise<Array<{matchedTransactionIds: string[]}>>} Groups of
+ *   transaction ids that appear to be recurring.
+ */
+export async function findRecurringGroups(transactions, tolerancePct = 0.063) {
+  const pyodide = await getPyodide();
+  const transactionsJson = JSON.stringify(transactions);
+  const findRecurringGroupsJson = pyodide.globals.get("find_recurring_groups_json");
+  const resultJson = findRecurringGroupsJson(transactionsJson, tolerancePct);
+  return JSON.parse(resultJson);
+}

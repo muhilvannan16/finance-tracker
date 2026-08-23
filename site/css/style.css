@@ -145,6 +145,11 @@ body {
   font-size: 0.8rem;
 }
 
+#ai-key-error {
+  color: var(--expense);
+  font-size: 0.8rem;
+}
+
 #balance-chart {
   max-height: 260px;
   margin-top: 0.5rem;
@@ -514,6 +519,117 @@ input:-webkit-autofill:focus {
   gap: 0.35rem;
 }
 
+/* ---- Recurring Suggestions ---- */
+
+.suggestion-banner {
+  background: var(--bg);
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.suggestion-banner:last-child {
+  margin-bottom: 0;
+}
+
+.suggestion-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.suggestion-label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.suggestion-meta {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-family: var(--font-mono);
+}
+
+.suggestion-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.suggestion-empty {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+/* ---- AI Settings ---- */
+
+.key-input-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.key-input-row input {
+  flex: 1;
+}
+
+/* ---- Modal ---- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-box {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.modal-box p {
+  margin-bottom: 1rem;
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.btn-delete-confirm {
+  background: var(--expense);
+  color: var(--text);
+  border: none;
+  padding: 0.6rem 1.25rem;
+  border-radius: 6px;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.btn-delete-confirm:hover {
+  background: #c9503e;
+}
+
 /* ---- Focus visible (keyboard) ---- */
 
 :focus-visible {
@@ -589,5 +705,10 @@ select:focus-visible {
 
   .tx-amount {
     min-width: auto;
+  }
+
+  .suggestion-banner {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

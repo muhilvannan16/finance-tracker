@@ -21,6 +21,21 @@
       <select id="account-selector"></select>
     </header>
 
+    <div class="card">
+      <h2>AI Settings</h2>
+      <p id="ai-status"></p>
+      <div class="form-field">
+        <label for="ai-api-key-input">Groq API Key</label>
+        <div class="key-input-row">
+          <input type="password" id="ai-api-key-input" placeholder="Enter your Groq API key">
+          <button type="button" id="toggle-key-visibility" class="btn-secondary">Show</button>
+        </div>
+      </div>
+      <p id="ai-key-error"></p>
+      <button type="button" id="save-ai-key-btn" class="btn-primary">Save Key</button>
+      <button type="button" id="remove-ai-key-btn" class="btn-secondary" style="display: none;">Remove Key</button>
+    </div>
+
     <hr class="horizon-line">
 
     <div id="projection-tool" class="card">
@@ -82,6 +97,13 @@
     </div>
 
     <div class="card">
+      <h2>Recurring Suggestions</h2>
+      <button type="button" id="check-recurring-btn" class="btn-secondary"
+        disabled>Check for Recurring Charges</button>
+      <div id="recurring-suggestions-list"></div>
+    </div>
+
+    <div class="card">
       <h2>Add Transaction</h2>
       <form id="transaction-form">
         <div class="form-field">
@@ -135,6 +157,17 @@
       <div id="transaction-list"></div>
     </div>
 
+  </div>
+
+  <div id="remove-key-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+      <p>Remove your saved API key? AI-assisted recurring detection will
+        be disabled until you add a new key.</p>
+      <div class="modal-actions">
+        <button type="button" id="cancel-remove-key-btn" class="btn-secondary">Cancel</button>
+        <button type="button" id="confirm-remove-key-btn" class="btn-delete-confirm">Remove Key</button>
+      </div>
+    </div>
   </div>
 
   <script type="module" src="js/app.js"></script>
