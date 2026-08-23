@@ -29,6 +29,7 @@
 const TRANSACTIONS_KEY = "finance-tracker:transactions";
 const ACCOUNTS_KEY = "finance-tracker:accounts";
 const TRANSFERS_KEY = "finance-tracker:transfers";
+const HANDLED_RECURRING_KEY = "finance-tracker:handledRecurringGroups";
 
 /**
  * Reads the transactions list from localStorage.
@@ -136,4 +137,42 @@ export function getTransfers() {
  */
 export function saveTransfers(transfers) {
   localStorage.setItem(TRANSFERS_KEY, JSON.stringify(transfers));
+}
+
+/**
+ * Reads the handled recurring ids list from localStorage.
+ *
+ * Retrieves the value stored under the "finance-tracker:handledRecurringGroups"
+ * key, parses it as JSON, and returns the resulting array. If the key does
+ * not exist or the stored value is not valid JSON, returns an empty array.
+ *
+ * @returns {string[]} The ids of transactions that have already been handled
+ *   (accepted or dismissed) by the recurring-suggestion feature, so they're
+ *   excluded from future detection passes, or an empty array if none are
+ *   found or the data is corrupt.
+ */
+export function getHandledRecurringIds() {
+  const raw = localStorage.getItem(HANDLED_RECURRING_KEY);
+  if (raw === null) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Persists the given handled recurring ids array to localStorage.
+ *
+ * Serialises the array as JSON and writes it to the
+ * "finance-tracker:handledRecurringGroups" key, replacing any previous value.
+ *
+ * @param {string[]} ids - The full list of handled transaction ids to store.
+ * @returns {void}
+ */
+export function saveHandledRecurringIds(ids) {
+  localStorage.setItem(HANDLED_RECURRING_KEY, JSON.stringify(ids));
 }

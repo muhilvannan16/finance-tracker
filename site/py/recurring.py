@@ -1,3 +1,19 @@
+import json
+from datetime import date
+
+def parse_dated_records(json_str):
+    """
+    Parses a JSON string of records (transactions) and returns a new
+    list where each record's "date" field has been converted from a
+    string to a real date object.
+    """
+    records = json.loads(json_str)
+    return [
+        {**record, "date": date.fromisoformat(record["date"])}
+        for record in records
+    ]
+
+
 def find_valid_runs(sorted_group):
     """
     Given a list of transactions (already sorted by date, already
@@ -92,3 +108,25 @@ def find_recurring_groups(transactions, tolerance_pct=0.063):
                     recurring_groups.append(chain)
 
     return recurring_groups
+
+def find_recurring_groups_json(transactions_json, tolerance_pct=0.063):
+    """
+    JSON-friendly entry point for find_recurring_groups, callable from JS.
+
+    transactions_json: a JSON string of transaction objects, exactly as
+        stored by storage.js (dates as "YYYY-MM-DD" strings).
+    tolerance_pct: amount tolerance for grouping, see find_recurring_groups.
+
+    Returns a JSON string: a list of objects, each shaped like
+        {"matchedTransactionIds": ["id1", "id2", "id3"]}
+    ready for the JS side to build full suggestion objects from
+    (normalizedLabel, confidence, source are added on the JS side).
+    """
+    transactions = parse_dated_records(transactions_json)
+    groups = find_recurring_groups(transactions, tolerance_pct)
+
+    result = [
+        {"matchedTransactionIds": [t["id"] for t in group]}
+        for group in groups
+    ]
+    return json.dumps(result)
