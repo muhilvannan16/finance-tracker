@@ -147,4 +147,4 @@ If you find this project useful or interesting, consider giving it a star — it
 
 ## 👤 Author
 
-**Muhilvannan Elavazhgan** ([@muhilvannan16](https://github.com/muhilvannan16))
+**Muhilvannan Elavazhagan** ([@muhilvannan16](https://github.com/muhilvannan16))
