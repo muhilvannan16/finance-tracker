@@ -306,6 +306,7 @@ function handleEdit(id) {
   document.getElementById("label").value = tx.label;
   if (FIXED_CATEGORIES.includes(tx.category)) {
     document.getElementById("category").value = tx.category;
+    document.getElementById("category-custom-field").style.display = "none";
   } else {
     document.getElementById("category").value = "Other";
     document.getElementById("category-custom").value = tx.category;
@@ -376,6 +377,12 @@ function handleFormSubmit(e) {
     categorySelect === "Other"
       ? document.getElementById("category-custom").value.trim()
       : categorySelect;
+  const errorEl = document.getElementById("category-error");
+  errorEl.textContent = "";
+  if (categorySelect === "Other" && category === "") {
+    errorEl.textContent = "Custom category cannot be empty.";
+    return;
+  }
   const amount = Number(document.getElementById("amount").value);
   const direction = document.getElementById("direction").value;
   const date = document.getElementById("date").value;

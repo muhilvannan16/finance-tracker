@@ -93,6 +93,7 @@ async function renderBudgets() {
  */
 async function handleBudgetSubmit(e) {
   e.preventDefault();
+  await plannerReadyPromise;
   const categorySelect = document.getElementById("budget-category").value;
   const category =
     categorySelect === "Other"
@@ -103,6 +104,10 @@ async function handleBudgetSubmit(e) {
   const endDate = document.getElementById("budget-end-date").value;
   const errorEl = document.getElementById("budget-form-error");
   errorEl.textContent = "";
+  if (categorySelect === "Other" && category === "") {
+    errorEl.textContent = "Custom category cannot be empty.";
+    return;
+  }
   if (limit <= 0) {
     errorEl.textContent = "Spending limit must be greater than $0.";
     return;
@@ -136,4 +141,4 @@ document.getElementById("budget-form").addEventListener("submit", handleBudgetSu
 
 /* ---- Bootstrap ---- */
 
-initPlanner();
+const plannerReadyPromise = initPlanner();

@@ -1,4 +1,6 @@
 import json
+from calendar import monthrange
+from datetime import date
 
 def has_overlap(category, start_date, end_date, existing_budgets):
     """
@@ -61,9 +63,11 @@ def amount_spent(category, start_date, end_date, transactions):
     """
     Sum the total amount spent in a given category and date range.
 
-    Only counts transactions with direction == "expense" — income
-    transactions don't count against a spending budget, even if they
-    happen to share the same category.
+    Only counts transactions with direction == "expense". Monthly-
+    recurring transactions are expanded — each occurrence that falls
+    inside the window counts separately, not just the template once.
+    Spending is also capped at today's date, so future-dated
+    transactions inside the window don't count as already spent.
 
     Args:
         category (str | None): The category to filter by, or None to
@@ -71,29 +75,29 @@ def amount_spent(category, start_date, end_date, transactions):
         start_date (str): ISO date string, e.g. "2026-09-01".
         end_date (str): ISO date string, e.g. "2026-09-30".
         transactions (list[dict]): Each dict has keys "category",
-            "date", "amount", "direction" (matching storage.js's shape).
+            "date", "amount", "direction", "frequency" (matching
+            storage.js's shape).
 
     Returns:
         float: The total amount spent matching the filters.
     """
+    start_date_obj = date.fromisoformat(start_date)
+    end_date_obj = date.fromisoformat(end_date)
+
+    effective_end = min(end_date_obj, date.today())
     total = 0
 
     for tx in transactions:
-        # Step 1: skip anything that isn't an expense
         if tx['direction'] != "expense":
             continue
 
-        # Step 2: skip anything outside the date range
-        if tx['date'] < start_date or tx['date'] > end_date:
-            continue
-
-        # Step 3: skip anything that doesn't match the category
-        #         (remember: category=None means "match everything")
         if category is not None and tx['category'] != category:
             continue
 
-        # Step 4: add this transaction's amount to the running total
-        total += tx['amount']
+        tx_date_obj = date.fromisoformat(tx['date'])
+
+        occurences = count_occurrences_in_range(tx_date_obj, tx['frequency'], start_date_obj, effective_end)
+        total += tx['amount'] * occurences
 
     return total
 
@@ -114,3 +118,69 @@ def amount_spent_json(category, start_date, end_date, transactions_json):
     """
     transactions = json.loads(transactions_json)
     return amount_spent(category, start_date, end_date, transactions)
+
+def add_one_month(d):
+    """
+    Returns the date exactly one calendar month after d, anchored to d's
+    own day-of-month. If that day doesn't exist in the target month
+    (e.g. Jan 31 -> Feb), clamps to that month's last valid day.
+
+    Duplicated from projection.py rather than imported, since each
+    Pyodide-loaded engine file is self-contained (budgets.py is loaded
+    independently on the Planner page, without projection.py).
+    """
+    year = d.year
+    month = d.month + 1
+    if month > 12:
+        month = 1
+        year += 1
+    day = d.day
+    last_day_of_target_month = monthrange(year, month)[1]
+    if day > last_day_of_target_month:
+        day = last_day_of_target_month
+    return date(year, month, day)
+
+
+def count_occurrences_in_range(tx_date, frequency, range_start, range_end):
+    """
+    Counts how many times a transaction actually lands inside
+    [range_start, range_end] (inclusive), given its frequency.
+
+    A "none" transaction occurs at most once — either its date falls
+    in the window or it doesn't. A "monthly" transaction is a
+    template: it recurs every month from tx_date onward, and each
+    individual occurrence that lands in the window counts separately.
+
+    Args:
+        tx_date (date): The transaction's anchor date.
+        frequency (str): "none" or "monthly".
+        range_start (date): Start of the window (inclusive).
+        range_end (date): End of the window (inclusive).
+
+    Returns:
+        int: The number of occurrences falling inside the window.
+    """
+    if frequency == "none":
+        # TODO — return 1 if tx_date falls within [range_start, range_end],
+        #        otherwise 0.
+        if range_start <= tx_date <= range_end:
+            return 1
+        else:
+            return 0
+        
+    elif frequency == "monthly":
+        count = 0
+        current = tx_date
+        # TODO — while `current` hasn't stepped past range_end:
+        #   - if `current` is >= range_start, increment count
+        #     (it's possible for the first occurrence(s) to be
+        #     before range_start, so don't count those)
+        #   - advance `current` using add_one_month(current)
+        while current <= range_end:
+            if current >= range_start:
+                count += 1
+            current = add_one_month(current)
+            
+        return count
+
+    return 0

@@ -188,6 +188,11 @@ body {
   font-size: 0.8rem;
 }
 
+#category-error {
+  color: var(--expense);
+  font-size: 0.8rem;
+}
+
 #balance-chart {
   max-height: 260px;
   margin-top: 0.5rem;
