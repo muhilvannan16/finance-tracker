@@ -19,6 +19,10 @@
       <p id="engine-status">Loading calculation engine…</p>
       <p id="current-balance"></p>
       <select id="account-selector"></select>
+      <nav class="page-nav">
+        <a href="index.html" class="active">Tracker</a>
+        <a href="planner.html">Planner</a>
+      </nav>
     </header>
 
     <div class="card">
@@ -113,7 +117,22 @@
 
         <div class="form-field">
           <label for="category">Category</label>
-          <input type="text" id="category" name="category" required>
+          <select id="category" name="category" required>
+            <option value="Groceries">Groceries</option>
+            <option value="Dining">Dining</option>
+            <option value="Transport">Transport</option>
+            <option value="Utilities">Utilities</option>
+            <option value="Rent">Rent</option>
+            <option value="Entertainment">Entertainment</option>
+            <option value="Health">Health</option>
+            <option value="Shopping">Shopping</option>
+            <option value="Income">Income</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-field" id="category-custom-field" style="display: none;">
+          <label for="category-custom">Custom category</label>
+          <input type="text" id="category-custom" name="category-custom">
         </div>
 
         <div class="form-field">

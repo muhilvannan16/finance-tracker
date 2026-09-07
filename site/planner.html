@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>finance-tracker — Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;600&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/pyodide/v314.0.4/full/pyodide.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero">
+      <h1>finance-tracker</h1>
+      <p id="engine-status">Loading calculation engine…</p>
+      <nav class="page-nav">
+        <a href="index.html">Tracker</a>
+        <a href="planner.html" class="active">Planner</a>
+      </nav>
+    </header>
+    <div class="card">
+      <h2>Budgets</h2>
+      <div id="budget-list"></div>
+      <form id="budget-form">
+        <div class="form-field">
+          <label for="budget-category">Category</label>
+          <select id="budget-category" name="budget-category" required>
+            <option value="Groceries">Groceries</option>
+            <option value="Dining">Dining</option>
+            <option value="Transport">Transport</option>
+            <option value="Utilities">Utilities</option>
+            <option value="Rent">Rent</option>
+            <option value="Entertainment">Entertainment</option>
+            <option value="Health">Health</option>
+            <option value="Shopping">Shopping</option>
+            <option value="Income">Income</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-field" id="budget-category-custom-field" style="display: none;">
+          <label for="budget-category-custom">Custom category</label>
+          <input type="text" id="budget-category-custom" name="budget-category-custom">
+        </div>
+        <div class="form-field">
+          <label for="budget-limit">Limit Amount</label>
+          <input type="number" id="budget-limit" name="budget-limit" min="0" step="0.01" required>
+        </div>
+        <div class="form-field">
+          <label for="budget-start-date">Start Date</label>
+          <input type="date" id="budget-start-date" name="budget-start-date" required>
+        </div>
+        <div class="form-field">
+          <label for="budget-end-date">End Date</label>
+          <input type="date" id="budget-end-date" name="budget-end-date" required>
+        </div>
+        <p id="budget-form-error"></p>
+        <button type="submit" class="btn-primary">Add Budget</button>
+      </form>
+    </div>
+  </div>
+  <script type="module" src="js/planner.js"></script>
+</body>
+</html>

@@ -80,6 +80,39 @@ body {
   margin-bottom: 0.75rem;
 }
 
+/* ---- Page Nav ---- */
+
+.page-nav {
+  display: inline-flex;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.page-nav a {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 0.3rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  transition: color var(--transition), border-color var(--transition),
+    background var(--transition);
+}
+
+.page-nav a:hover {
+  color: var(--text);
+  border-color: rgba(244, 241, 234, 0.15);
+  background: rgba(244, 241, 234, 0.03);
+}
+
+.page-nav a.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(240, 168, 104, 0.08);
+}
+
 /* ---- Horizon Line ---- */
 
 .horizon-line {
@@ -146,6 +179,11 @@ body {
 }
 
 #ai-key-error {
+  color: var(--expense);
+  font-size: 0.8rem;
+}
+
+#budget-form-error {
   color: var(--expense);
   font-size: 0.8rem;
 }
@@ -659,6 +697,70 @@ select:focus-visible {
 
 #current-balance.balance-updated {
   animation: balance-update 0.4s ease;
+}
+
+/* ---- Budget List ---- */
+
+#budget-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.budget-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid rgba(244, 241, 234, 0.06);
+}
+
+.budget-row:last-child {
+  border-bottom: none;
+}
+
+.budget-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.budget-category {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.budget-range {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.budget-amount {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.budget-row.over-budget .budget-amount {
+  color: var(--expense);
+}
+
+.budget-bar-track {
+  height: 8px;
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+.budget-bar-fill {
+  height: 8px;
+  border-radius: var(--radius);
+  background: var(--accent);
+  transition: width var(--transition);
+}
+
+.budget-bar-fill.over-budget {
+  background: var(--expense);
 }
 
 /* ---- Reduced Motion ---- */

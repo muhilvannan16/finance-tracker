@@ -143,3 +143,61 @@ export async function findRecurringGroups(transactions, tolerancePct = 0.063) {
   const resultJson = findRecurringGroupsJson(transactionsJson, tolerancePct);
   return JSON.parse(resultJson);
 }
+
+/**
+ * Loads the budgets engine Python source into the Pyodide runtime.
+ *
+ * Fetches "py/budgets.py" (served alongside index.html), then executes
+ * its source inside Pyodide so that all Python functions it defines —
+ * including `has_overlap_json` — become available in the global namespace.
+ *
+ * @returns {Promise<void>}
+ */
+export async function loadBudgetsEngine() {
+  const pyodide = await initPyodide();
+  const response = await fetch("py/budgets.py");
+  const source = await response.text();
+  pyodide.runPython(source);
+}
+
+/**
+ * Checks whether a proposed budget overlaps with any existing budget
+ * for the same category by calling the Python `has_overlap_json`
+ * function loaded by {@link loadBudgetsEngine}.
+ *
+ * @param {string} category - The budget category to check.
+ * @param {string} startDate - ISO date string for the budget period
+ *   start (e.g. "2026-09-01").
+ * @param {string} endDate - ISO date string for the budget period
+ *   end (e.g. "2026-09-30").
+ * @param {Array<object>} existingBudgets - Budget objects (same shape
+ *   that storage.js produces).
+ * @returns {Promise<boolean>} True if an overlap exists, false otherwise.
+ */
+export async function checkBudgetOverlap(category, startDate, endDate, existingBudgets) {
+  const pyodide = await getPyodide();
+  const budgetsJson = JSON.stringify(existingBudgets);
+  const hasOverlapJson = pyodide.globals.get("has_overlap_json");
+  return hasOverlapJson(category, startDate, endDate, budgetsJson);
+}
+
+/**
+ * Computes the total amount spent in a category over a date range by
+ * calling the Python `amount_spent_json` function loaded by
+ * {@link loadBudgetsEngine}.
+ *
+ * @param {string} category - The budget category to total.
+ * @param {string} startDate - ISO date string for the period start
+ *   (e.g. "2026-09-01").
+ * @param {string} endDate - ISO date string for the period end
+ *   (e.g. "2026-09-30").
+ * @param {Array<object>} transactions - Transaction objects (same shape
+ *   that storage.js produces).
+ * @returns {Promise<number>} The total spent as a plain JS number.
+ */
+export async function getAmountSpent(category, startDate, endDate, transactions) {
+  const pyodide = await getPyodide();
+  const transactionsJson = JSON.stringify(transactions);
+  const amountSpentJson = pyodide.globals.get("amount_spent_json");
+  return amountSpentJson(category, startDate, endDate, transactionsJson);
+}
