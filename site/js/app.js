@@ -13,6 +13,18 @@ import { detectRecurringWithAI } from "./aiSuggestions.js";
 
 export const AI_API_KEY_STORAGE_KEY = "finance-tracker:aiApiKey";
 
+const FIXED_CATEGORIES = [
+  "Groceries",
+  "Dining",
+  "Transport",
+  "Utilities",
+  "Rent",
+  "Entertainment",
+  "Health",
+  "Shopping",
+  "Income",
+];
+
 /**
  * The id of the transaction currently being edited, or null if the form
  * is in "add new" mode.
@@ -292,7 +304,14 @@ function handleEdit(id) {
   if (!tx) return;
 
   document.getElementById("label").value = tx.label;
-  document.getElementById("category").value = tx.category;
+  if (FIXED_CATEGORIES.includes(tx.category)) {
+    document.getElementById("category").value = tx.category;
+    document.getElementById("category-custom-field").style.display = "none";
+  } else {
+    document.getElementById("category").value = "Other";
+    document.getElementById("category-custom").value = tx.category;
+    document.getElementById("category-custom-field").style.display = "block";
+  }
   document.getElementById("amount").value = tx.amount;
   document.getElementById("direction").value = tx.direction;
   document.getElementById("date").value = tx.date;
@@ -313,6 +332,7 @@ function handleEdit(id) {
  */
 function handleCancelEdit() {
   document.getElementById("transaction-form").reset();
+  document.getElementById("category-custom-field").style.display = "none";
   editingId = null;
   document.getElementById("cancel-edit-btn").style.display = "none";
   document.querySelector("#transaction-form button[type='submit']").textContent =
@@ -352,7 +372,17 @@ function handleFormSubmit(e) {
   e.preventDefault();
 
   const label = document.getElementById("label").value.trim();
-  const category = document.getElementById("category").value.trim();
+  const categorySelect = document.getElementById("category").value;
+  const category =
+    categorySelect === "Other"
+      ? document.getElementById("category-custom").value.trim()
+      : categorySelect;
+  const errorEl = document.getElementById("category-error");
+  errorEl.textContent = "";
+  if (categorySelect === "Other" && category === "") {
+    errorEl.textContent = "Custom category cannot be empty.";
+    return;
+  }
   const amount = Number(document.getElementById("amount").value);
   const direction = document.getElementById("direction").value;
   const date = document.getElementById("date").value;
@@ -390,6 +420,7 @@ function handleFormSubmit(e) {
     balanceChart = null;
   }
   e.target.reset();
+  document.getElementById("category-custom-field").style.display = "none";
   editingId = null;
   document.getElementById("cancel-edit-btn").style.display = "none";
   document.querySelector("#transaction-form button[type='submit']").textContent =
@@ -1211,6 +1242,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("cancel-edit-btn")
     .addEventListener("click", handleCancelEdit);
+
+  document.getElementById("category")
+    .addEventListener("change", (e) => {
+      document.getElementById("category-custom-field").style.display =
+        e.target.value === "Other" ? "block" : "none";
+    });
 
   document.getElementById("account-selector")
     .addEventListener("change", () => {

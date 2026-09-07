@@ -30,6 +30,7 @@ const TRANSACTIONS_KEY = "finance-tracker:transactions";
 const ACCOUNTS_KEY = "finance-tracker:accounts";
 const TRANSFERS_KEY = "finance-tracker:transfers";
 const HANDLED_RECURRING_KEY = "finance-tracker:handledRecurringGroups";
+const BUDGETS_KEY = "finance-tracker:budgets";
 
 /**
  * Reads the transactions list from localStorage.
@@ -175,4 +176,40 @@ export function getHandledRecurringIds() {
  */
 export function saveHandledRecurringIds(ids) {
   localStorage.setItem(HANDLED_RECURRING_KEY, JSON.stringify(ids));
+}
+
+/**
+ * Reads the budgets list from localStorage.
+ *
+ * Retrieves the value stored under the "finance-tracker:budgets" key,
+ * parses it as JSON, and returns the resulting array. If the key does not
+ * exist or the stored value is not valid JSON, returns an empty array.
+ *
+ * @returns {Array} The stored budgets, or an empty array if none are
+ *   found or the data is corrupt.
+ */
+export function getBudgets() {
+  const raw = localStorage.getItem(BUDGETS_KEY);
+  if (raw === null) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Persists the given budgets array to localStorage.
+ *
+ * Serialises the array as JSON and writes it to the
+ * "finance-tracker:budgets" key, replacing any previous value.
+ *
+ * @param {Array} budgets - The full list of budget objects to store.
+ * @returns {void}
+ */
+export function saveBudgets(budgets) {
+  localStorage.setItem(BUDGETS_KEY, JSON.stringify(budgets));
 }
