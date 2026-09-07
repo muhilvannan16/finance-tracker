@@ -161,8 +161,6 @@ def count_occurrences_in_range(tx_date, frequency, range_start, range_end):
         int: The number of occurrences falling inside the window.
     """
     if frequency == "none":
-        # TODO — return 1 if tx_date falls within [range_start, range_end],
-        #        otherwise 0.
         if range_start <= tx_date <= range_end:
             return 1
         else:
@@ -171,11 +169,6 @@ def count_occurrences_in_range(tx_date, frequency, range_start, range_end):
     elif frequency == "monthly":
         count = 0
         current = tx_date
-        # TODO — while `current` hasn't stepped past range_end:
-        #   - if `current` is >= range_start, increment count
-        #     (it's possible for the first occurrence(s) to be
-        #     before range_start, so don't count those)
-        #   - advance `current` using add_one_month(current)
         while current <= range_end:
             if current >= range_start:
                 count += 1
