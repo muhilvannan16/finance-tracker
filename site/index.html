@@ -70,7 +70,15 @@
           <label for="account-starting-balance">Starting Balance</label>
           <input type="number" id="account-starting-balance" step="0.01" value="0" required>
         </div>
+        <div class="form-field">
+          <label for="account-type">Type</label>
+          <select id="account-type" required>
+            <option value="asset">Asset</option>
+            <option value="liability">Liability</option>
+          </select>
+        </div>
         <button type="submit" class="btn-primary">Add Account</button>
+        <button type="button" id="cancel-account-edit-btn" style="display: none;">Cancel</button>
       </form>
     </div>
 

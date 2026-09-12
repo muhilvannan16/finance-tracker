@@ -74,6 +74,12 @@ let editingTransferId = null;
 let pendingRecurringSuggestions = [];
 
 /**
+ * ID of the account currently being edited, or null when adding a new one.
+ * @type {string | null}
+ */
+let editingAccountId = null;
+
+/**
  * Ensures a default "Main" account exists in storage.
  *
  * Reads the accounts array — if it is empty, creates a single account
@@ -139,10 +145,21 @@ function renderAccountList() {
     const balSpan = document.createElement("span");
     balSpan.className = "acct-balance";
     const sign = acct.startingBalance < 0 ? "-" : "";
-    balSpan.textContent = `Starting: ${sign}$${Math.abs(acct.startingBalance).toFixed(2)}`;
+    const label = acct.type === "liability" ? "Owes" : "Starting";
+    balSpan.textContent = `${label}: ${sign}$${Math.abs(acct.startingBalance).toFixed(2)}`;
 
     info.append(nameSpan, balSpan);
-    row.appendChild(info);
+
+    const actions = document.createElement("div");
+    actions.className = "account-actions";
+
+    const editBtn = document.createElement("button");
+    editBtn.className = "btn-secondary";
+    editBtn.textContent = "Edit";
+    editBtn.addEventListener("click", () => handleAccountEdit(acct.id));
+    actions.appendChild(editBtn);
+
+    row.append(info, actions);
     list.appendChild(row);
   });
 }
@@ -172,11 +189,52 @@ function renderTxAccountOptions() {
 }
 
 /**
+ * Populates the account form with the values of the account being edited
+ * and switches the form into edit mode.
+ *
+ * @param {string} id — the account id to edit
+ * @returns {void}
+ */
+function handleAccountEdit(id) {
+  const accounts = getAccounts();
+  const acct = accounts.find((a) => a.id === id);
+  if (!acct) return;
+
+  editingAccountId = id;
+
+  document.getElementById("account-name").value = acct.name;
+  document.getElementById("account-starting-balance").value = acct.startingBalance;
+  document.getElementById("account-type").value = acct.type || "asset";
+
+  document.getElementById("cancel-account-edit-btn").style.display = "";
+  document.querySelector("#account-form button[type='submit']").textContent =
+    "Update Account";
+}
+
+/**
+ * Cancels an in-progress account edit, resets the form, and hides
+ * the Cancel button.
+ *
+ * @returns {void}
+ */
+function handleCancelAccountEdit() {
+  editingAccountId = null;
+  document.getElementById("account-form").reset();
+  document.getElementById("cancel-account-edit-btn").style.display = "none";
+  document.querySelector("#account-form button[type='submit']").textContent =
+    "Add Account";
+}
+
+document
+  .getElementById("cancel-account-edit-btn")
+  .addEventListener("click", handleCancelAccountEdit);
+
+/**
  * Handles the account-form submit event.
  *
- * Reads name and starting balance, builds an account object, appends it
- * to the accounts array, persists, re-renders all account-related UI,
- * and resets the form.
+ * When editingAccountId is set, updates the existing account in place.
+ * Otherwise creates a new account. In both cases persists, re-renders
+ * all account-related UI, and resets the form.
  *
  * @param {SubmitEvent} e
  * @returns {void}
@@ -188,17 +246,32 @@ function handleAccountFormSubmit(e) {
   const startingBalance = Number(
     document.getElementById("account-starting-balance").value
   );
-
-  const account = {
-    id: crypto.randomUUID(),
-    name,
-    startingBalance,
-  };
+  const type = document.getElementById("account-type").value;
 
   const accounts = getAccounts();
-  accounts.push(account);
-  saveAccounts(accounts);
 
+  if (editingAccountId) {
+    const target = accounts.find((a) => a.id === editingAccountId);
+    if (target) {
+      target.name = name;
+      target.startingBalance = startingBalance;
+      target.type = type;
+    }
+    editingAccountId = null;
+    document.getElementById("cancel-account-edit-btn").style.display = "none";
+    document.querySelector("#account-form button[type='submit']").textContent =
+      "Add Account";
+  } else {
+    const account = {
+      id: crypto.randomUUID(),
+      name,
+      startingBalance,
+      type,
+    };
+    accounts.push(account);
+  }
+
+  saveAccounts(accounts);
   renderAccountList();
   renderAccountSelector();
   renderTxAccountOptions();

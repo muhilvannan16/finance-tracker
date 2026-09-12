@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;600&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <script src="https://cdn.jsdelivr.net/pyodide/v314.0.4/full/pyodide.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -20,6 +21,28 @@
         <a href="planner.html" class="active">Planner</a>
       </nav>
     </header>
+    <div class="card" id="untyped-accounts-card" style="display: none;">
+      <h2>Assign Account Types</h2>
+      <p>These accounts were created before account types existed. Assign
+        a type to each before Net Worth can be calculated.</p>
+      <div id="untyped-accounts-list"></div>
+    </div>
+    <div class="card">
+      <h2>Net Worth</h2>
+      <div class="projection-controls">
+        <div class="form-field">
+          <label for="networth-start-date">Start Date</label>
+          <input type="date" id="networth-start-date" required>
+        </div>
+        <div class="form-field">
+          <label for="networth-end-date">End Date</label>
+          <input type="date" id="networth-end-date" required>
+        </div>
+        <button type="button" id="show-networth-chart-btn" class="btn-secondary">Show Chart</button>
+      </div>
+      <p id="networth-error"></p>
+      <canvas id="networth-chart"></canvas>
+    </div>
     <div class="card">
       <h2>Budgets</h2>
       <div id="budget-list"></div>

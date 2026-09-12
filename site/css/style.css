@@ -183,6 +183,7 @@ body {
   font-size: 0.8rem;
 }
 
+#networth-error,
 #budget-form-error {
   color: var(--expense);
   font-size: 0.8rem;
@@ -423,6 +424,11 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 }
 
 .transaction-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.account-actions {
   display: flex;
   gap: 0.35rem;
 }

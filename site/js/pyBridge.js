@@ -201,3 +201,46 @@ export async function getAmountSpent(category, startDate, endDate, transactions)
   const amountSpentJson = pyodide.globals.get("amount_spent_json");
   return amountSpentJson(category, startDate, endDate, transactionsJson);
 }
+
+/**
+ * Loads the net worth engine Python source into the Pyodide runtime.
+ *
+ * Fetches "py/networth.py" (served alongside index.html), then
+ * executes its source inside Pyodide so that net_worth_series_json
+ * becomes available in the global namespace. Depends on
+ * loadProjectionEngine already having been called, since
+ * networth.py calls balance_series and parse_dated_records from
+ * projection.py.
+ *
+ * @returns {Promise<void>}
+ */
+export async function loadNetWorthEngine() {
+  const pyodide = await initPyodide();
+  const response = await fetch("py/networth.py");
+  const source = await response.text();
+  pyodide.runPython(source);
+}
+
+/**
+ * Computes a net worth trend by calling the Python
+ * net_worth_series_json function loaded by {@link loadNetWorthEngine}.
+ *
+ * @param {Array<object>} accounts - Account objects (same shape that
+ *   storage.js produces).
+ * @param {Array<object>} transactions - Transaction objects (same
+ *   shape that storage.js produces).
+ * @param {Array<object>} transfers - Transfer objects (same shape
+ *   that storage.js produces).
+ * @param {string} startDate - ISO date string for the range start.
+ * @param {string} endDate - ISO date string for the range end.
+ * @returns {Promise<Array<{date: string, netWorth: number}>>}
+ */
+export async function getNetWorthSeries(accounts, transactions, transfers, startDate, endDate) {
+  const pyodide = await getPyodide();
+  const accountsJson = JSON.stringify(accounts);
+  const transactionsJson = JSON.stringify(transactions);
+  const transfersJson = JSON.stringify(transfers);
+  const netWorthSeriesJson = pyodide.globals.get("net_worth_series_json");
+  const resultJson = netWorthSeriesJson(accountsJson, transactionsJson, transfersJson, startDate, endDate);
+  return JSON.parse(resultJson);
+}

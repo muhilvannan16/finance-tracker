@@ -24,6 +24,9 @@
  * @property {string} id
  * @property {string} name
  * @property {number} startingBalance
+ * @property {"asset" | "liability"} [type] - Optional for backward
+ *   compatibility; accounts created before this field existed may not
+ *   have it set.
  */
 
 const TRANSACTIONS_KEY = "finance-tracker:transactions";
