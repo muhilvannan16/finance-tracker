@@ -221,6 +221,7 @@ function handleAccountEdit(id) {
 function handleCancelAccountEdit() {
   editingAccountId = null;
   document.getElementById("account-form").reset();
+  document.getElementById("account-type").dispatchEvent(new Event("change"));
   document.getElementById("cancel-account-edit-btn").style.display = "none";
   document.querySelector("#account-form button[type='submit']").textContent =
     "Add Account";
@@ -293,6 +294,7 @@ function handleAccountFormSubmit(e) {
   renderTxAccountOptions();
   renderTransferAccountOptions();
   e.target.reset();
+  document.getElementById("account-type").dispatchEvent(new Event("change"));
 }
 
 /**
