@@ -184,8 +184,14 @@ body {
 }
 
 #networth-error,
-#budget-form-error {
+#budget-form-error,
+#account-form-error {
   color: var(--expense);
+  font-size: 0.8rem;
+}
+
+#account-balance-hint {
+  color: var(--muted);
   font-size: 0.8rem;
 }
 

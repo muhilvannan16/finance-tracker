@@ -67,9 +67,10 @@
           <input type="text" id="account-name" required>
         </div>
         <div class="form-field">
-          <label for="account-starting-balance">Starting Balance</label>
+          <label for="account-starting-balance" id="account-starting-balance-label">Starting Balance</label>
           <input type="number" id="account-starting-balance" step="0.01" value="0" required>
         </div>
+        <p id="account-balance-hint" style="display: none;">Enter the amount owed as a positive number.</p>
         <div class="form-field">
           <label for="account-type">Type</label>
           <select id="account-type" required>
@@ -77,6 +78,7 @@
             <option value="liability">Liability</option>
           </select>
         </div>
+        <p id="account-form-error"></p>
         <button type="submit" class="btn-primary">Add Account</button>
         <button type="button" id="cancel-account-edit-btn" style="display: none;">Cancel</button>
       </form>

@@ -154,7 +154,7 @@ function renderAccountList() {
     actions.className = "account-actions";
 
     const editBtn = document.createElement("button");
-    editBtn.className = "btn-secondary";
+    editBtn.className = "btn-edit";
     editBtn.textContent = "Edit";
     editBtn.addEventListener("click", () => handleAccountEdit(acct.id));
     actions.appendChild(editBtn);
@@ -205,6 +205,7 @@ function handleAccountEdit(id) {
   document.getElementById("account-name").value = acct.name;
   document.getElementById("account-starting-balance").value = acct.startingBalance;
   document.getElementById("account-type").value = acct.type || "asset";
+  document.getElementById("account-type").dispatchEvent(new Event("change"));
 
   document.getElementById("cancel-account-edit-btn").style.display = "";
   document.querySelector("#account-form button[type='submit']").textContent =
@@ -229,6 +230,14 @@ document
   .getElementById("cancel-account-edit-btn")
   .addEventListener("click", handleCancelAccountEdit);
 
+document.getElementById("account-type").addEventListener("change", (e) => {
+  const isLiability = e.target.value === "liability";
+  document.getElementById("account-starting-balance-label").textContent =
+    isLiability ? "Amount Owed" : "Starting Balance";
+  document.getElementById("account-balance-hint").style.display =
+    isLiability ? "block" : "none";
+});
+
 /**
  * Handles the account-form submit event.
  *
@@ -247,6 +256,13 @@ function handleAccountFormSubmit(e) {
     document.getElementById("account-starting-balance").value
   );
   const type = document.getElementById("account-type").value;
+
+  const errorEl = document.getElementById("account-form-error");
+  errorEl.textContent = "";
+  if (type === "liability" && startingBalance < 0) {
+    errorEl.textContent = "A liability's amount owed must be zero or positive.";
+    return;
+  }
 
   const accounts = getAccounts();
 
