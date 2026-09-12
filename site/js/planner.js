@@ -1,5 +1,5 @@
-import { initPyodide, loadBudgetsEngine, checkBudgetOverlap, getAmountSpent } from "./pyBridge.js";
-import { getBudgets, saveBudgets, getTransactions } from "./storage.js";
+import { initPyodide, loadProjectionEngine, loadBudgetsEngine, loadNetWorthEngine, checkBudgetOverlap, getAmountSpent, getNetWorthSeries } from "./pyBridge.js";
+import { getBudgets, saveBudgets, getTransactions, getTransfers, getAccounts, saveAccounts } from "./storage.js";
 
 /**
  * Boots the Pyodide runtime and loads the budgets calculation engine.
@@ -12,14 +12,70 @@ import { getBudgets, saveBudgets, getTransactions } from "./storage.js";
 async function initPlanner() {
   try {
     await initPyodide();
+    await loadProjectionEngine();
+    await loadNetWorthEngine();
     await loadBudgetsEngine();
     document.getElementById("engine-status").style.display = "none";
     await renderBudgets();
+    renderUntypedAccounts();
   } catch (err) {
     document.getElementById("engine-status").textContent =
       "Calculation engine failed to load. Try refreshing the page.";
     console.error("Pyodide failed to load:", err);
   }
+}
+
+let netWorthChart = null;
+
+/* ---- Untyped accounts migration ---- */
+
+/**
+ * Checks for accounts missing a "type" field (created before account
+ * types existed) and renders a form to assign one to each. Shows or
+ * hides #untyped-accounts-card depending on whether any are found.
+ *
+ * @returns {void}
+ */
+function renderUntypedAccounts() {
+  const accounts = getAccounts();
+  const untyped = accounts.filter((a) => !a.type);
+  const card = document.getElementById("untyped-accounts-card");
+  const list = document.getElementById("untyped-accounts-list");
+  list.innerHTML = "";
+
+  if (untyped.length === 0) {
+    card.style.display = "none";
+    return;
+  }
+  card.style.display = "block";
+
+  untyped.forEach((account) => {
+    const row = document.createElement("div");
+    row.className = "form-field";
+
+    const label = document.createElement("label");
+    label.textContent = account.name;
+
+    const select = document.createElement("select");
+    select.innerHTML = `
+      <option value="">Choose type…</option>
+      <option value="asset">Asset</option>
+      <option value="liability">Liability</option>
+    `;
+    select.addEventListener("change", () => {
+      if (!select.value) return;
+      const allAccounts = getAccounts();
+      const target = allAccounts.find((a) => a.id === account.id);
+      if (target) {
+        target.type = select.value;
+        saveAccounts(allAccounts);
+      }
+      renderUntypedAccounts();
+    });
+
+    row.append(label, select);
+    list.appendChild(row);
+  });
 }
 
 /* ---- Category custom-field toggle ---- */
@@ -138,6 +194,106 @@ async function handleBudgetSubmit(e) {
 }
 
 document.getElementById("budget-form").addEventListener("submit", handleBudgetSubmit);
+
+/* ---- Net Worth chart ---- */
+
+/**
+ * Renders a line chart of net worth over the selected date range.
+ * Blocks the calculation (rather than crashing) if any account is
+ * still missing a type, since net_worth_series_json requires every
+ * account to have one.
+ *
+ * @returns {Promise<void>}
+ */
+async function renderNetWorthChart() {
+  const startDate = document.getElementById("networth-start-date").value;
+  const endDate = document.getElementById("networth-end-date").value;
+  const errorEl = document.getElementById("networth-error");
+  errorEl.textContent = "";
+
+  if (!startDate || !endDate) {
+    errorEl.textContent = "Please select both a start and end date.";
+    return;
+  }
+  if (startDate > endDate) {
+    errorEl.textContent = "Start date must be before end date.";
+    return;
+  }
+
+  const accounts = getAccounts();
+  if (accounts.some((a) => !a.type)) {
+    errorEl.textContent =
+      "Assign a type to every account above before calculating net worth.";
+    return;
+  }
+
+  const transactions = getTransactions();
+  const transfers = getTransfers();
+
+  const series = await getNetWorthSeries(accounts, transactions, transfers, startDate, endDate);
+
+  if (netWorthChart) {
+    netWorthChart.destroy();
+  }
+
+  const ctx = document.getElementById("networth-chart").getContext("2d");
+  const gradient = ctx.createLinearGradient(0, 0, ctx.canvas.width, 0);
+  gradient.addColorStop(0, "#12172B");
+  gradient.addColorStop(1, "#F0A868");
+
+  netWorthChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: series.map((point) => point.date),
+      datasets: [
+        {
+          label: "Net Worth",
+          data: series.map((point) => point.netWorth),
+          borderColor: gradient,
+          borderWidth: 2.5,
+          pointBackgroundColor: "#F0A868",
+          pointBorderColor: "#1B2242",
+          pointRadius: series.length === 1 ? 5 : 0,
+          pointHoverRadius: 5,
+          tension: 0.3,
+          fill: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          labels: {
+            color: "#9AA0B4",
+            font: { family: "'IBM Plex Mono', monospace", size: 11 },
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: "#9AA0B4",
+            font: { family: "'IBM Plex Mono', monospace", size: 10 },
+            maxRotation: 45,
+          },
+          grid: { color: "rgba(244, 241, 234, 0.06)" },
+        },
+        y: {
+          ticks: {
+            color: "#9AA0B4",
+            font: { family: "'IBM Plex Mono', monospace", size: 10 },
+          },
+          grid: { color: "rgba(244, 241, 234, 0.06)" },
+        },
+      },
+    },
+  });
+}
+
+document
+  .getElementById("show-networth-chart-btn")
+  .addEventListener("click", renderNetWorthChart);
 
 /* ---- Bootstrap ---- */
 

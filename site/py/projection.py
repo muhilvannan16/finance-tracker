@@ -165,5 +165,3 @@ def balance_series_json(transactions_json, transfers_json, starting_balance, sta
     )
     return json.dumps([{"date": d.isoformat(), "balance": b} for d, b in checkpoints])
 
-
-
