@@ -244,3 +244,39 @@ export async function getNetWorthSeries(accounts, transactions, transfers, start
   const resultJson = netWorthSeriesJson(accountsJson, transactionsJson, transfersJson, startDate, endDate);
   return JSON.parse(resultJson);
 }
+
+/**
+ * Loads the debt payoff engine Python source into the Pyodide runtime.
+ *
+ * Fetches "py/debt.py" (served alongside index.html), then executes
+ * its source inside Pyodide so that simulate_payoff_json becomes
+ * available in the global namespace.
+ *
+ * @returns {Promise<void>}
+ */
+export async function loadDebtEngine() {
+  const pyodide = await initPyodide();
+  const response = await fetch("py/debt.py");
+  const source = await response.text();
+  pyodide.runPython(source);
+}
+
+/**
+ * Simulates a debt payoff plan by calling the Python
+ * simulate_payoff_json function loaded by {@link loadDebtEngine}.
+ *
+ * @param {Array<{id: string, balance: number, interestRate: number,
+ *   minimumPaymentPercent: number}>} debts - Debts with their current
+ *   (already-computed) balances.
+ * @param {string} strategy - "avalanche" or "snowball".
+ * @param {number} extraPayment - Additional monthly payment beyond
+ *   every debt's minimum.
+ * @returns {Promise<{strategy: string, success: boolean, months: number|null, totalInterestPaid: number}>}
+ */
+export async function simulatePayoff(debts, strategy, extraPayment) {
+  const pyodide = await getPyodide();
+  const debtsJson = JSON.stringify(debts);
+  const simulatePayoffJson = pyodide.globals.get("simulate_payoff_json");
+  const resultJson = simulatePayoffJson(debtsJson, strategy, extraPayment);
+  return JSON.parse(resultJson);
+}

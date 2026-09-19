@@ -27,6 +27,13 @@
         a type to each before Net Worth can be calculated.</p>
       <div id="untyped-accounts-list"></div>
     </div>
+    <div class="card" id="missing-debt-info-card" style="display: none;">
+      <h2>Complete Debt Details</h2>
+      <p>These liability accounts are missing an interest rate or minimum
+        payment percentage. Fill both in before payoff tracking can be
+        calculated.</p>
+      <div id="missing-debt-info-list"></div>
+    </div>
     <div class="card">
       <h2>Net Worth</h2>
       <div class="projection-controls">
@@ -42,6 +49,25 @@
       </div>
       <p id="networth-error"></p>
       <canvas id="networth-chart"></canvas>
+    </div>
+    <div class="card">
+      <h2>Debt Payoff</h2>
+      <div class="projection-controls">
+        <div class="form-field">
+          <label for="debt-strategy">Strategy</label>
+          <select id="debt-strategy">
+            <option value="avalanche">Avalanche (highest interest first)</option>
+            <option value="snowball">Snowball (smallest balance first)</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="debt-extra-payment">Extra Monthly Payment</label>
+          <input type="number" id="debt-extra-payment" min="0" step="0.01" value="0">
+        </div>
+        <button type="button" id="calculate-payoff-btn" class="btn-secondary">Calculate</button>
+      </div>
+      <p id="debt-error"></p>
+      <div id="debt-result"></div>
     </div>
     <div class="card">
       <h2>Budgets</h2>

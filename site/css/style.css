@@ -184,6 +184,7 @@ body {
 }
 
 #networth-error,
+#debt-error,
 #budget-form-error,
 #account-form-error {
   color: var(--expense);
