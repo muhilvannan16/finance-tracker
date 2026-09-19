@@ -27,6 +27,11 @@
  * @property {"asset" | "liability"} [type] - Optional for backward
  *   compatibility; accounts created before this field existed may not
  *   have it set.
+ * @property {number} [interestRate] - APR as a percentage (e.g. 24.99
+ *   for 24.99%). Only present on liability accounts.
+ * @property {number} [minimumPaymentPercent] - Minimum monthly
+ *   payment as a percentage of current balance. Only present on
+ *   liability accounts.
  */
 
 const TRANSACTIONS_KEY = "finance-tracker:transactions";

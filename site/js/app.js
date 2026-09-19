@@ -205,6 +205,8 @@ function handleAccountEdit(id) {
   document.getElementById("account-name").value = acct.name;
   document.getElementById("account-starting-balance").value = acct.startingBalance;
   document.getElementById("account-type").value = acct.type || "asset";
+  document.getElementById("account-interest-rate").value = acct.interestRate ?? "";
+  document.getElementById("account-min-payment").value = acct.minimumPaymentPercent ?? "";
   document.getElementById("account-type").dispatchEvent(new Event("change"));
 
   document.getElementById("cancel-account-edit-btn").style.display = "";
@@ -237,6 +239,10 @@ document.getElementById("account-type").addEventListener("change", (e) => {
     isLiability ? "Amount Owed" : "Starting Balance";
   document.getElementById("account-balance-hint").style.display =
     isLiability ? "block" : "none";
+  document.getElementById("account-interest-rate-field").style.display =
+    isLiability ? "block" : "none";
+  document.getElementById("account-min-payment-field").style.display =
+    isLiability ? "block" : "none";
 });
 
 /**
@@ -258,8 +264,19 @@ function handleAccountFormSubmit(e) {
   );
   const type = document.getElementById("account-type").value;
 
+  const interestRate = type === "liability"
+    ? Number(document.getElementById("account-interest-rate").value)
+    : null;
+  const minimumPaymentPercent = type === "liability"
+    ? Number(document.getElementById("account-min-payment").value)
+    : null;
+
   const errorEl = document.getElementById("account-form-error");
   errorEl.textContent = "";
+  if (type === "liability" && (!interestRate || interestRate <= 0 || !minimumPaymentPercent || minimumPaymentPercent <= 0)) {
+    errorEl.textContent = "Liabilities need a positive interest rate and minimum payment percentage.";
+    return;
+  }
   if (type === "liability" && startingBalance < 0) {
     errorEl.textContent = "A liability's amount owed must be zero or positive.";
     return;
@@ -273,6 +290,8 @@ function handleAccountFormSubmit(e) {
       target.name = name;
       target.startingBalance = startingBalance;
       target.type = type;
+      target.interestRate = interestRate;
+      target.minimumPaymentPercent = minimumPaymentPercent;
     }
     editingAccountId = null;
     document.getElementById("cancel-account-edit-btn").style.display = "none";
@@ -284,6 +303,8 @@ function handleAccountFormSubmit(e) {
       name,
       startingBalance,
       type,
+      interestRate,
+      minimumPaymentPercent,
     };
     accounts.push(account);
   }

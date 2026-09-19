@@ -1,4 +1,4 @@
-import { initPyodide, loadProjectionEngine, loadBudgetsEngine, loadNetWorthEngine, checkBudgetOverlap, getAmountSpent, getNetWorthSeries } from "./pyBridge.js";
+import { initPyodide, loadProjectionEngine, loadBudgetsEngine, loadNetWorthEngine, loadDebtEngine, checkBudgetOverlap, getAmountSpent, getNetWorthSeries, getProjectedBalance, simulatePayoff } from "./pyBridge.js";
 import { getBudgets, saveBudgets, getTransactions, getTransfers, getAccounts, saveAccounts } from "./storage.js";
 
 /**
@@ -14,10 +14,12 @@ async function initPlanner() {
     await initPyodide();
     await loadProjectionEngine();
     await loadNetWorthEngine();
+    await loadDebtEngine();
     await loadBudgetsEngine();
     document.getElementById("engine-status").style.display = "none";
     await renderBudgets();
     renderUntypedAccounts();
+    renderMissingDebtInfo();
   } catch (err) {
     document.getElementById("engine-status").textContent =
       "Calculation engine failed to load. Try refreshing the page.";
@@ -71,9 +73,84 @@ function renderUntypedAccounts() {
         saveAccounts(allAccounts);
       }
       renderUntypedAccounts();
+      renderMissingDebtInfo();
     });
 
     row.append(label, select);
+    list.appendChild(row);
+  });
+}
+
+/* ---- Missing debt info migration ---- */
+
+/**
+ * Checks for liability accounts missing an interest rate or minimum
+ * payment percentage, and renders inline inputs to fill both in.
+ * Shows or hides #missing-debt-info-card depending on whether any
+ * are found.
+ *
+ * @returns {void}
+ */
+function renderMissingDebtInfo() {
+  const accounts = getAccounts();
+  const incomplete = accounts.filter(
+    (a) => a.type === "liability" && (!a.interestRate || !a.minimumPaymentPercent)
+  );
+  const card = document.getElementById("missing-debt-info-card");
+  const list = document.getElementById("missing-debt-info-list");
+  list.innerHTML = "";
+
+  if (incomplete.length === 0) {
+    card.style.display = "none";
+    return;
+  }
+  card.style.display = "block";
+
+  incomplete.forEach((account) => {
+    const row = document.createElement("div");
+    row.className = "form-field";
+
+    const label = document.createElement("label");
+    label.textContent = account.name;
+
+    const rateInput = document.createElement("input");
+    rateInput.type = "number";
+    rateInput.step = "0.01";
+    rateInput.min = "0";
+    rateInput.placeholder = "Interest rate %";
+
+    const minInput = document.createElement("input");
+    minInput.type = "number";
+    minInput.step = "0.01";
+    minInput.min = "0";
+    minInput.max = "100";
+    minInput.placeholder = "Min payment %";
+
+    const saveBtn = document.createElement("button");
+    saveBtn.type = "button";
+    saveBtn.className = "btn-secondary";
+    saveBtn.textContent = "Save";
+    saveBtn.addEventListener("click", () => {
+      const errorEl = document.getElementById("missing-debt-info-error");
+      errorEl.textContent = "";
+      const rate = Number(rateInput.value);
+      const minPct = Number(minInput.value);
+      if (!rate || rate <= 0 || !minPct || minPct <= 0) {
+        errorEl.textContent =
+          "Enter a positive interest rate and minimum payment percentage.";
+        return;
+      }
+      const allAccounts = getAccounts();
+      const target = allAccounts.find((a) => a.id === account.id);
+      if (target) {
+        target.interestRate = rate;
+        target.minimumPaymentPercent = minPct;
+        saveAccounts(allAccounts);
+      }
+      renderMissingDebtInfo();
+    });
+
+    row.append(label, rateInput, minInput, saveBtn);
     list.appendChild(row);
   });
 }
@@ -294,6 +371,89 @@ async function renderNetWorthChart() {
 document
   .getElementById("show-networth-chart-btn")
   .addEventListener("click", renderNetWorthChart);
+
+/* ---- Debt payoff ---- */
+
+/**
+ * Gathers every liability account's current balance (via
+ * getProjectedBalance, as of today), runs the debt payoff
+ * simulation with the selected strategy and extra payment, and
+ * renders the result. Blocks the calculation if any liability is
+ * still missing interest rate/minimum payment data, or if there are
+ * no liability accounts at all.
+ *
+ * @returns {Promise<void>}
+ */
+async function handleCalculatePayoff() {
+  await plannerReadyPromise;
+  const errorEl = document.getElementById("debt-error");
+  const resultEl = document.getElementById("debt-result");
+  errorEl.textContent = "";
+  resultEl.innerHTML = "";
+
+  const accounts = getAccounts();
+  const liabilities = accounts.filter((a) => a.type === "liability");
+
+  if (liabilities.length === 0) {
+    errorEl.textContent = "You have no liability accounts — nothing to pay off.";
+    return;
+  }
+
+  const incomplete = liabilities.filter(
+    (a) => !a.interestRate || !a.minimumPaymentPercent
+  );
+  if (incomplete.length > 0) {
+    errorEl.textContent =
+      "Complete the interest rate and minimum payment for every liability above before calculating payoff.";
+    return;
+  }
+
+  const strategy = document.getElementById("debt-strategy").value;
+  const extraPayment = Number(document.getElementById("debt-extra-payment").value);
+
+  if (extraPayment < 0) {
+    errorEl.textContent = "Extra monthly payment cannot be negative.";
+    return;
+  }
+
+  const transactions = getTransactions();
+  const transfers = getTransfers();
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+  const debts = [];
+  for (const account of liabilities) {
+    const balance = await getProjectedBalance(
+      transactions,
+      transfers,
+      account.startingBalance,
+      today,
+      account.id
+    );
+    debts.push({
+      id: account.id,
+      balance,
+      interestRate: account.interestRate,
+      minimumPaymentPercent: account.minimumPaymentPercent,
+    });
+  }
+
+  const result = await simulatePayoff(debts, strategy, extraPayment);
+
+  if (!result.success) {
+    resultEl.innerHTML = `<p>Under these terms, this debt cannot be paid off within 50 years. Consider increasing your extra payment.</p>`;
+    return;
+  }
+
+  resultEl.innerHTML = `
+    <p><strong>${result.months}</strong> months to debt-free using the <strong>${result.strategy}</strong> strategy.</p>
+    <p>Total interest paid: <strong>$${result.totalInterestPaid.toFixed(2)}</strong></p>
+  `;
+}
+
+document
+  .getElementById("calculate-payoff-btn")
+  .addEventListener("click", handleCalculatePayoff);
 
 /* ---- Bootstrap ---- */
 

@@ -78,6 +78,14 @@
             <option value="liability">Liability</option>
           </select>
         </div>
+        <div class="form-field" id="account-interest-rate-field" style="display: none;">
+          <label for="account-interest-rate">Interest Rate (APR %)</label>
+          <input type="number" id="account-interest-rate" step="0.01" min="0">
+        </div>
+        <div class="form-field" id="account-min-payment-field" style="display: none;">
+          <label for="account-min-payment">Minimum Payment (% of balance)</label>
+          <input type="number" id="account-min-payment" step="0.01" min="0" max="100">
+        </div>
         <p id="account-form-error"></p>
         <button type="submit" class="btn-primary">Add Account</button>
         <button type="button" id="cancel-account-edit-btn" style="display: none;">Cancel</button>
