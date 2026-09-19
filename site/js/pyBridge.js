@@ -67,14 +67,15 @@ export async function loadProjectionEngine() {
  * @param {string} asOfDateStr - ISO date string (e.g. "2026-06-01") to
  *   project up to.
  * @param {string} accountId - The account to project for.
+ * @param {string} [accountType="asset"] - "asset" or "liability".
  * @returns {Promise<number>} The projected balance as a plain JS number.
  */
-export async function getProjectedBalance(transactions, transfers, startingBalance, asOfDateStr, accountId) {
+export async function getProjectedBalance(transactions, transfers, startingBalance, asOfDateStr, accountId, accountType = "asset") {
   const pyodide = await getPyodide();
   const transactionsJson = JSON.stringify(transactions);
   const transfersJson = JSON.stringify(transfers);
   const projectFromJson = pyodide.globals.get("project_from_json");
-  return projectFromJson(transactionsJson, transfersJson, startingBalance, asOfDateStr, accountId);
+  return projectFromJson(transactionsJson, transfersJson, startingBalance, asOfDateStr, accountId, accountType);
 }
 
 /**
@@ -94,15 +95,16 @@ export async function getProjectedBalance(transactions, transfers, startingBalan
  * @param {string} endDateStr - ISO date string for the series end
  *   (e.g. "2026-12-31").
  * @param {string} accountId - The account to project for.
+ * @param {string} [accountType="asset"] - "asset" or "liability".
  * @returns {Promise<Array<{date: string, balance: number}>>} Daily
  *   balance points.
  */
-export async function getBalanceSeries(transactions, transfers, startingBalance, startDateStr, endDateStr, accountId) {
+export async function getBalanceSeries(transactions, transfers, startingBalance, startDateStr, endDateStr, accountId, accountType = "asset") {
   const pyodide = await getPyodide();
   const transactionsJson = JSON.stringify(transactions);
   const transfersJson = JSON.stringify(transfers);
   const balanceSeriesJson = pyodide.globals.get("balance_series_json");
-  const resultJson = balanceSeriesJson(transactionsJson, transfersJson, startingBalance, startDateStr, endDateStr, accountId);
+  const resultJson = balanceSeriesJson(transactionsJson, transfersJson, startingBalance, startDateStr, endDateStr, accountId, accountType);
   return JSON.parse(resultJson);
 }
 

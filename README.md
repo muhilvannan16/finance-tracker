@@ -150,7 +150,7 @@ AI-assisted recurring-charge detection is **entirely optional** and off by defau
 
 - It only activates if you enter your own [Groq](https://groq.com/) API key in the "AI Settings" card.
 - Your key is stored **only in your browser's `localStorage`** — it is never sent anywhere except directly to Groq's API when you use the feature.
-- When enabled, transactions left unmatched by the rule-based pass — just their `id`, `label`, `category`, `amount`, and `date` — are sent **directly from your browser to Groq's API**. There is no backend in this project, so no server the developer controls ever sees this data.
+- When enabled, transactions left unmatched by the rule-based pass — their full stored details, including `id`, `label`, `category`, `amount`, `direction`, `date`, `accountId`, and `frequency` — are sent **directly from your browser to Groq's API**. There is no backend in this project, so no server the developer controls ever sees this data.
 - Remove your key at any time from the "AI Settings" card; the app falls back to rule-based detection only.
 
 ---

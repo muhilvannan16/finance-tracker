@@ -32,6 +32,12 @@ balance, and a **Type**.
   - **Minimum Payment (% of balance)** — your minimum payment as a
     percentage of the current balance, not a flat dollar amount.
 
+For a liability account, transactions and transfers work in reverse
+compared to an asset account: an **expense** transaction or a
+transfer *out* increases the amount you owe, while an **income**
+transaction or a transfer *in* decreases it — the same way a real
+purchase adds to a credit card balance and a real payment reduces it.
+
 Both are required for a liability account, since they power the Debt
 Payoff calculator (see below). Click **Edit** on any account to
 change its name, balance, or type later.

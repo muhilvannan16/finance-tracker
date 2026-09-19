@@ -55,14 +55,21 @@ def parse_dated_records(json_str):
         for record in records
     ]
 
-def projected_balance(transactions, transfers, starting_balance, as_of_date, account_id):
+def projected_balance(transactions, transfers, starting_balance, as_of_date, account_id, account_type="asset"):
     """
     Calculates the projected balance as of as_of_date, given a starting
     balance, a list of transaction dicts (keys: amount, direction, date,
     frequency), a list of transfer dicts (keys: fromAccountId, toAccountId,
-    amount, date), and the id of the account being calculated for, also filters by account_id.
+    amount, date), the id of the account being calculated for, and its
+    type ("asset" or "liability").
+
+    For a liability account (balance stored as a positive "amount
+    owed"), every transaction and transfer's effect is inverted
+    relative to an asset: an expense increases the amount owed, income
+    decreases it, and a transfer in pays it down while a transfer out
+    increases it — matching how a real debt actually behaves.
     """
-    balance = starting_balance
+    asset_style_balance = starting_balance
 
     for transaction in transactions:
         amount = transaction['amount']
@@ -75,26 +82,31 @@ def projected_balance(transactions, transfers, starting_balance, as_of_date, acc
 
         if frequency == "none":
             if transaction_occurred_by(transaction_date, as_of_date):
-                balance += amount if direction == "income" else -amount
+                asset_style_balance += amount if direction == "income" else -amount
         elif frequency == "monthly":
             occurrences = count_monthly_occurrences(transaction_date, as_of_date)
-            balance += occurrences * (amount if direction == "income" else -amount)
+            asset_style_balance += occurrences * (amount if direction == "income" else -amount)
+
     for transfer in transfers:
         transfer_date = transfer['date']
         if transfer_date <= as_of_date:
             if transfer['fromAccountId'] == account_id:
-                balance -= transfer['amount']
+                asset_style_balance -= transfer['amount']
             elif transfer['toAccountId'] == account_id:
-                balance += transfer['amount']
+                asset_style_balance += transfer['amount']
 
-    return balance
+    if account_type == "liability":
+        return 2 * starting_balance - asset_style_balance
+    else:
+        return asset_style_balance
 
-def project_from_json(transactions_json, transfers_json, starting_balance, as_of_date_str, account_id):
+
+def project_from_json(transactions_json, transfers_json, starting_balance, as_of_date_str, account_id, account_type="asset"):
     transactions = parse_dated_records(transactions_json)
     transfers = parse_dated_records(transfers_json)
     as_of_date = date.fromisoformat(as_of_date_str)
 
-    return projected_balance(transactions, transfers, starting_balance, as_of_date, account_id)
+    return projected_balance(transactions, transfers, starting_balance, as_of_date, account_id, account_type)
 
 def add_one_month(d):
     """
@@ -114,7 +126,7 @@ def add_one_month(d):
         day = last_day_of_target_month
     return date(year, month, day)
 
-def balance_series(transactions, transfers, starting_balance, start_date, end_date, account_id):
+def balance_series(transactions, transfers, starting_balance, start_date, end_date, account_id, account_type="asset"):
     """
     Computes the projected balance at monthly checkpoints from start_date
     up through end_date (inclusive of the last checkpoint that doesn't
@@ -125,6 +137,11 @@ def balance_series(transactions, transfers, starting_balance, start_date, end_da
     chained from a previous (possibly already-clamped) checkpoint, so a
     short month like February doesn't permanently drag later checkpoints
     down to the 28th.
+
+    account_type ("asset" or "liability") is passed through to
+    projected_balance at each checkpoint, so a liability's balance is
+    correctly inverted the same way at every point in the series, not
+    just at a single date.
 
     Returns a list of (date, balance) tuples.
     """
@@ -144,14 +161,15 @@ def balance_series(transactions, transfers, starting_balance, start_date, end_da
             break
 
         balance = projected_balance(
-            transactions, transfers, starting_balance, current_date, account_id
+            transactions, transfers, starting_balance, current_date, account_id, account_type
         )
         checkpoints.append((current_date, balance))
         month_offset += 1
 
     return checkpoints
 
-def balance_series_json(transactions_json, transfers_json, starting_balance, start_date_str, end_date_str, account_id):
+
+def balance_series_json(transactions_json, transfers_json, starting_balance, start_date_str, end_date_str, account_id, account_type="asset"):
     """
     JSON-friendly entry point for balance_series, callable from JavaScript.
     """
@@ -161,7 +179,7 @@ def balance_series_json(transactions_json, transfers_json, starting_balance, sta
     end_date = date.fromisoformat(end_date_str)
 
     checkpoints = balance_series(
-        transactions, transfers, starting_balance, start_date, end_date, account_id
+        transactions, transfers, starting_balance, start_date, end_date, account_id, account_type
     )
     return json.dumps([{"date": d.isoformat(), "balance": b} for d, b in checkpoints])
 
