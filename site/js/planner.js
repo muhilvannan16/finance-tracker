@@ -73,6 +73,7 @@ function renderUntypedAccounts() {
         saveAccounts(allAccounts);
       }
       renderUntypedAccounts();
+      renderMissingDebtInfo();
     });
 
     row.append(label, select);
@@ -130,9 +131,15 @@ function renderMissingDebtInfo() {
     saveBtn.className = "btn-secondary";
     saveBtn.textContent = "Save";
     saveBtn.addEventListener("click", () => {
+      const errorEl = document.getElementById("missing-debt-info-error");
+      errorEl.textContent = "";
       const rate = Number(rateInput.value);
       const minPct = Number(minInput.value);
-      if (!rate || rate <= 0 || !minPct || minPct <= 0) return;
+      if (!rate || rate <= 0 || !minPct || minPct <= 0) {
+        errorEl.textContent =
+          "Enter a positive interest rate and minimum payment percentage.";
+        return;
+      }
       const allAccounts = getAccounts();
       const target = allAccounts.find((a) => a.id === account.id);
       if (target) {
@@ -378,6 +385,7 @@ document
  * @returns {Promise<void>}
  */
 async function handleCalculatePayoff() {
+  await plannerReadyPromise;
   const errorEl = document.getElementById("debt-error");
   const resultEl = document.getElementById("debt-result");
   errorEl.textContent = "";
@@ -403,9 +411,15 @@ async function handleCalculatePayoff() {
   const strategy = document.getElementById("debt-strategy").value;
   const extraPayment = Number(document.getElementById("debt-extra-payment").value);
 
+  if (extraPayment < 0) {
+    errorEl.textContent = "Extra monthly payment cannot be negative.";
+    return;
+  }
+
   const transactions = getTransactions();
   const transfers = getTransfers();
-  const today = new Date().toISOString().split("T")[0];
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
   const debts = [];
   for (const account of liabilities) {
@@ -427,7 +441,7 @@ async function handleCalculatePayoff() {
   const result = await simulatePayoff(debts, strategy, extraPayment);
 
   if (!result.success) {
-    resultEl.innerHTML = `<p>Under these terms, this debt cannot be paid off within ${result.months === null ? "50 years" : result.months + " months"}. Consider increasing your extra payment.</p>`;
+    resultEl.innerHTML = `<p>Under these terms, this debt cannot be paid off within 50 years. Consider increasing your extra payment.</p>`;
     return;
   }
 

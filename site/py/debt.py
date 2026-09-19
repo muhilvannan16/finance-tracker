@@ -33,6 +33,8 @@ def order_debts(debts, strategy):
 MAX_MONTHS = 600
 
 
+CENT = 0.01
+
 def simulate_payoff(debts, strategy, extra_payment):
     """
     Simulates a month-by-month payoff plan, applying minimum payments
@@ -48,14 +50,16 @@ def simulate_payoff(debts, strategy, extra_payment):
             (APR as a percentage), "minimumPaymentPercent".
         strategy (str): "avalanche" or "snowball".
         extra_payment (float): Additional amount paid each month,
-            beyond every debt's own minimum, directed at the current
-            target debt.
+            beyond every debt's own minimum, distributed across debts
+            in strategy order — cascading to the next debt in the
+            same month if the current one is paid off with money
+            left over.
 
     Returns:
         dict: {
             "strategy": str,
-            "success": bool — whether every debt reached $0 within
-                MAX_MONTHS,
+            "success": bool — whether every debt reached $0 (or a
+                sub-cent residue) within MAX_MONTHS,
             "months": int or None — months taken if successful, else
                 None,
             "totalInterestPaid": float,
@@ -66,35 +70,42 @@ def simulate_payoff(debts, strategy, extra_payment):
     months = 0
 
     while months < MAX_MONTHS:
-        if all(d["balance"] <= 0 for d in working):
+        if all(d["balance"] <= CENT for d in working):
             break
         months += 1
 
         for d in working:
-            if d["balance"] > 0:
+            if d["balance"] > CENT:
                 interest = d["balance"] * (d["interestRate"] / 100 / 12)
                 d["balance"] += interest
                 total_interest_paid += interest
 
-        target = next((d for d in working if d["balance"] > 0), None)
+        for d in working:
+            if d["balance"] > CENT:
+                minimum = d["balance"] * (d["minimumPaymentPercent"] / 100)
+                minimum = min(minimum, d["balance"])
+                d["balance"] -= minimum
+
+        remaining_extra = extra_payment
+        for d in working:
+            if remaining_extra <= 0:
+                break
+            if d["balance"] > CENT:
+                applied = min(remaining_extra, d["balance"])
+                d["balance"] -= applied
+                remaining_extra -= applied
 
         for d in working:
-            if d["balance"] > 0:
-                payment = d["balance"] * (d["minimumPaymentPercent"] / 100)
-                if d is target:
-                    payment += extra_payment
-                payment = min(payment, d["balance"])
-                d["balance"] -= payment
+            if d["balance"] <= CENT:
+                d["balance"] = 0
 
-
-    success = all(d["balance"] <= 0 for d in working)
+    success = all(d["balance"] <= CENT for d in working)
     return {
         "strategy": strategy,
         "success": success,
         "months": months if success else None,
         "totalInterestPaid": total_interest_paid,
     }
-
 
 def simulate_payoff_json(debts_json, strategy, extra_payment):
     """
