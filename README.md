@@ -14,6 +14,7 @@ A personal finance tracker that runs entirely in your browser — multi-account 
 - [What Makes This Different](#what-makes-this-different)
 - [Features](#features)
 - [Screenshot](#screenshot)
+- [User Guide](docs/USER_GUIDE.md)
 - [Tech Stack](#tech-stack)
 - [Getting Started / Running Locally](#getting-started--running-locally)
 - [Project Structure](#project-structure)
@@ -29,6 +30,7 @@ A personal finance tracker that runs entirely in your browser — multi-account 
 - **Multi-account support with real transfers.** Accounts each have their own starting balance, and transfers move money between them (debiting one account, crediting the other) rather than treating everything as one pooled balance.
 - **Two-tier recurring-charge detection.** A deterministic rule-based pass in `recurring.py` groups transactions by label, category, amount tolerance, and ~monthly date spacing; anything left over can optionally be handed to an LLM (via your own Groq API key) to catch charges the strict rules miss — e.g. the same subscription billed under slightly different labels.
 - **Careful date math.** Monthly recurrence is anchored to each transaction's own start date (not a separate "day of month" field), and month-length edge cases (e.g. a charge on the 31st landing on Feb 28) are clamped independently per checkpoint so short months don't permanently drag later projections down.
+- **A full financial Planner, not just a tracker.** Budgets, net worth tracking, and a debt payoff calculator (`budgets.py`, `networth.py`, `debt.py`) live on a separate Planner page. `networth.py` and `debt.py` deliberately reuse `projection.py`'s existing balance logic rather than reimplementing transaction/transfer handling from scratch, so every calculation across the app stays consistent.
 
 ---
 
@@ -57,6 +59,19 @@ A personal finance tracker that runs entirely in your browser — multi-account 
 **Theme**
 - "The Horizon" — a custom dark theme (`site/css/style.css`) built on a navy/card palette with warm amber accents, Fraunces/Manrope/IBM Plex Mono type
 
+**Account types**
+- Accounts are Assets (checking, savings) or Liabilities (credit cards, loans), with liability balances stored as a positive "amount owed"
+- Liability accounts track an interest rate and minimum payment percentage, powering the Debt Payoff calculator
+
+**Budgets**
+- Set a spending limit per category over a custom date range, with overlap prevention and live spent-vs-limit tracking (including correct handling of recurring monthly transactions)
+
+**Net Worth**
+- A line chart of assets minus liabilities over time, computed at monthly checkpoints
+
+**Debt Payoff**
+- Simulates paying off every liability account with a chosen strategy (avalanche or snowball) and an optional extra monthly payment, reporting months to debt-free and total interest paid
+
 ---
 
 ## Screenshot
@@ -70,6 +85,8 @@ Rule-based and AI-assisted recurring charge detection, surfaced as actionable su
 Transfers between accounts, tracked separately from income/expense transactions:
 ![Transfers](docs/screenshot-transfers.png)
 
+For a walkthrough of the Planner features (Budgets, Net Worth, and Debt Payoff), see the [User Guide](docs/USER_GUIDE.md).
+
 ---
 
 ## Tech Stack
@@ -77,7 +94,7 @@ Transfers between accounts, tracked separately from income/expense transactions:
 | Layer | Technology |
 |---|---|
 | **Frontend** | Vanilla JavaScript (ES modules), HTML, CSS — no framework, no build step, no bundler |
-| **Forecasting & detection engine** | Python, running client-side via [Pyodide](https://pyodide.org/) (WebAssembly) |
+| **Forecasting & detection engine** | Python, running client-side via [Pyodide](https://pyodide.org/) (WebAssembly) — five engines: balance projection, recurring detection, budgets, net worth, and debt payoff |
 | **Storage** | Browser `localStorage` — all transaction/account data stays on your device |
 | **Charting** | [Chart.js](https://www.chartjs.org/) |
 | **AI (optional)** | [Groq API](https://groq.com/) — bring your own key |
@@ -107,17 +124,22 @@ finance-tracker/
 │   └── workflows/
 │       └── deploy.yml        # CI/CD — builds and deploys to GitHub Pages
 └── site/
-    ├── index.html            # App shell — cards for balance, projection, accounts, transfers, recurring suggestions, transactions
+    ├── index.html            # Tracker page — balance, projection, accounts, transfers, recurring suggestions, transactions
+    ├── planner.html           # Planner page — budgets, net worth, debt payoff
     ├── css/
     │   └── style.css         # "The Horizon" dark theme
     ├── js/
-    │   ├── app.js            # UI logic, event handlers, rendering, bootstrap
-    │   ├── storage.js        # localStorage persistence layer (transactions, accounts, transfers, handled-recurring ids)
-    │   ├── pyBridge.js        # Pyodide loading + JS↔Python bridge for both engines
+    │   ├── app.js            # Tracker page UI logic, event handlers, rendering, bootstrap
+    │   ├── planner.js        # Planner page UI logic, event handlers, rendering, bootstrap
+    │   ├── storage.js        # localStorage persistence layer
+    │   ├── pyBridge.js       # Pyodide loading + JS↔Python bridge for all five engines
     │   └── aiSuggestions.js  # Sends leftover transactions to the Groq API for AI-assisted recurring detection
     └── py/
-        ├── projection.py     # Balance projection engine (pure Python) — current & future balance, chart series
-        └── recurring.py      # Rule-based recurring-charge detection engine (pure Python)
+        ├── projection.py     # Balance projection engine — current & future balance, chart series
+        ├── recurring.py      # Rule-based recurring-charge detection engine
+        ├── budgets.py         # Budget overlap validation and spend calculation
+        ├── networth.py       # Net worth calculation, reusing projection.py's balance logic
+        └── debt.py            # Debt payoff simulation (avalanche/snowball)
 ```
 
 ---

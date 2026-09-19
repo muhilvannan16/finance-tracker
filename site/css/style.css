@@ -197,6 +197,11 @@ body {
   font-size: 0.8rem;
 }
 
+#ai-privacy-note {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
 #category-error {
   color: var(--expense);
   font-size: 0.8rem;

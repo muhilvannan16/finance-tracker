@@ -6,13 +6,11 @@ def has_overlap(category, start_date, end_date, existing_budgets):
     """
     Check whether a proposed budget conflicts with any existing budget.
 
-    Two budgets conflict if they share the same category (including
-    two "Overall" budgets, where category is None) AND their date
-    ranges overlap.
+    Two budgets conflict if they share the same category AND their
+    date ranges overlap.
 
     Args:
-        category (str | None): The category of the new budget, or
-            None if it's an "Overall" budget.
+        category (str): The category of the new budget.
         start_date (str): ISO date string, e.g. "2026-09-01".
         end_date (str): ISO date string, e.g. "2026-09-30".
         existing_budgets (list[dict]): Each dict has keys "category",
@@ -44,8 +42,7 @@ def has_overlap_json(category, start_date, end_date, existing_budgets_json):
     side before the actual logic can use it.
 
     Args:
-        category (str | None): The category of the new budget, or
-            None if it's an "Overall" budget.
+        category (str): The category of the new budget.
         start_date (str): ISO date string, e.g. "2026-09-01".
         end_date (str): ISO date string, e.g. "2026-09-30".
         existing_budgets_json (str): JSON-stringified array of existing
@@ -70,8 +67,7 @@ def amount_spent(category, start_date, end_date, transactions):
     transactions inside the window don't count as already spent.
 
     Args:
-        category (str | None): The category to filter by, or None to
-            include all categories (an "Overall" budget).
+        category (str): The category to filter by.
         start_date (str): ISO date string, e.g. "2026-09-01".
         end_date (str): ISO date string, e.g. "2026-09-30".
         transactions (list[dict]): Each dict has keys "category",
@@ -106,8 +102,7 @@ def amount_spent_json(category, start_date, end_date, transactions_json):
     JSON-string wrapper around amount_spent, for calling from JS via Pyodide.
 
     Args:
-        category (str | None): The category to filter by, or None to
-            include all categories (an "Overall" budget).
+        category (str): The category to filter by.
         start_date (str): ISO date string, e.g. "2026-09-01".
         end_date (str): ISO date string, e.g. "2026-09-30".
         transactions_json (str): JSON-stringified array of transaction
