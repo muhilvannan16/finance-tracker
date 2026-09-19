@@ -87,7 +87,6 @@ def find_recurring_groups(transactions, tolerance_pct=0.063):
     buckets = {}
     for t in transactions:
         key = (t['label'].lower(), t['category'].lower())
-        # TODO: add t to buckets[key], creating the list if needed
         if key not in buckets:
             buckets[key] = []
         buckets[key].append(t)
@@ -98,11 +97,8 @@ def find_recurring_groups(transactions, tolerance_pct=0.063):
     for key, group in buckets.items():
         amount_runs = group_by_amount_tolerance(group, tolerance_pct)
         for amount_run in amount_runs:
-            # TODO: sort amount_run by date before passing to find_valid_runs
             sorted_run = sorted(amount_run, key=lambda t: t['date'])
             date_chains = find_valid_runs(sorted_run)
-            # TODO: date_chains is a list of runs — add each one that's
-            # 3+ transactions long to recurring_groups
             for chain in date_chains:
                 if len(chain) >= 3:
                     recurring_groups.append(chain)

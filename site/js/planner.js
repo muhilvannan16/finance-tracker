@@ -428,7 +428,8 @@ async function handleCalculatePayoff() {
       transfers,
       account.startingBalance,
       today,
-      account.id
+      account.id,
+      account.type
     );
     debts.push({
       id: account.id,

@@ -42,7 +42,7 @@ def net_worth_series(accounts, transactions, transfers, start_date, end_date):
         account_id = account['id']
         starting_balance = account['startingBalance']
         account_type = account['type']
-        balance_series_points = balance_series(transactions, transfers, starting_balance, start_date, end_date, account_id)
+        balance_series_points = balance_series(transactions, transfers, starting_balance, start_date, end_date, account_id, account_type)
         sign = -1 if account_type == 'liability' else 1
         for point_date, balance in balance_series_points:
             combined[point_date] = combined.get(point_date, 0) + sign * balance

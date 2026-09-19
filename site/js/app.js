@@ -323,16 +323,17 @@ function handleAccountFormSubmit(e) {
  * the account id for the account currently selected in #account-selector.
  *
  * @returns {{ startingBalance: number, transactions: Array, transfers: Array,
- *   accountId: string }} The selected account's context for projection
- *   calculations.
+ *   accountId: string, accountType: string }} The selected account's context
+ *   for projection calculations.
  */
 function getSelectedAccountContext() {
   const selectedId = document.getElementById("account-selector").value;
   const account = getAccounts().find((a) => a.id === selectedId);
   const startingBalance = account ? account.startingBalance : 0;
+  const accountType = account ? account.type : "asset";
   const transactions = getTransactions();
   const transfers = getTransfers();
-  return { startingBalance, transactions, transfers, accountId: selectedId };
+  return { startingBalance, transactions, transfers, accountId: selectedId, accountType };
 }
 
 /**
@@ -558,14 +559,15 @@ async function renderCurrentBalance() {
       "-" +
       String(now.getDate()).padStart(2, "0");
 
-    const { startingBalance, transactions, transfers, accountId } = getSelectedAccountContext();
+    const { startingBalance, transactions, transfers, accountId, accountType } = getSelectedAccountContext();
 
     const balance = await getProjectedBalance(
       transactions,
       transfers,
       startingBalance,
       todayStr,
-      accountId
+      accountId,
+      accountType
     );
 
     const el = document.getElementById("current-balance");
@@ -600,14 +602,15 @@ async function renderProjectedBalance() {
   try {
     await engineReadyPromise;
 
-    const { startingBalance, transactions, transfers, accountId } = getSelectedAccountContext();
+    const { startingBalance, transactions, transfers, accountId, accountType } = getSelectedAccountContext();
 
     const balance = await getProjectedBalance(
       transactions,
       transfers,
       startingBalance,
       dateValue,
-      accountId
+      accountId,
+      accountType
     );
 
     const sign = balance < 0 ? "-" : "";
@@ -649,7 +652,7 @@ async function renderBalanceChart() {
       return;
     }  
 
-    const { startingBalance, transactions, transfers, accountId } = getSelectedAccountContext();
+    const { startingBalance, transactions, transfers, accountId, accountType } = getSelectedAccountContext();
 
     const series = await getBalanceSeries(
       transactions,
@@ -657,7 +660,8 @@ async function renderBalanceChart() {
       startingBalance,
       todayStr,
       dateValue,
-      accountId
+      accountId,
+      accountType
     );
 
     if (balanceChart) {
